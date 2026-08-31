@@ -2,185 +2,161 @@
 
 A Blender **5.2 LTS** extension for generating game-ready procedural trees without millions of individually modeled leaves.
 
-The design target is a traditional efficient vegetation pipeline brought into modern Blender:
-
-- low-sided procedural branch meshes,
-- shared 2D/bent foliage cards,
-- Geometry Nodes instancing,
-- texture-atlas variation,
-- deterministic seeds,
-- generated LODs,
-- engine-oriented wind attributes,
-- export-time foliage realization only when needed.
+Trees 2.0 combines low-sided woody geometry, instanced 2D foliage cards, competition-guided crown growth, manifold branch fusion, generated LODs, wind metadata, and automatic multi-view impostors.
 
 ## Status
 
-`0.2.0` is an authoring prototype intended for testing in Blender 5.2 LTS. Python syntax is checked in CI, but Blender-runtime behavior should still be treated as beta until exercised across several 5.2 builds and render/export paths.
+`0.3.0` is the current development version. Python syntax is checked in CI. Blender-runtime behavior should still be treated as beta until the new voxel-fusion and render-baking paths have been exercised on several Blender 5.2 scenes and hardware configurations.
 
 ## Installation
 
-1. Download/clone the repository.
+1. Download or clone the repository.
 2. Package the extension so `blender_manifest.toml` and `__init__.py` are at the ZIP root.
-3. In Blender 5.2: **Edit > Preferences > Get Extensions > Install from Disk**.
+3. In Blender 5.2 open **Edit > Preferences > Get Extensions > Install from Disk**.
 4. Enable **Trees 2.0** if needed.
 5. Open the 3D View sidebar (`N`) and choose **Trees 2.0**.
 
-## Generator model
+The extension requests Blender's **files** permission because the impostor baker writes PNG atlases to disk.
 
-### Structure
+## Main systems
 
-The generator builds a deterministic branch skeleton from a seed. Branches are converted directly to low-sided mesh tubes rather than high-resolution sculpted cylinders.
+### Procedural structure
 
-The current growth model includes:
+The deterministic tree skeleton supports:
 
 - root flare,
 - trunk taper and irregularity,
 - 1–4 branch levels,
-- golden-angle phyllotaxis, random, or whorled distribution,
-- crown profiles (round, oval, columnar, conical, vase, umbrella),
-- branch collars,
+- phyllotaxis, random, and whorled branch distribution,
+- round, oval, columnar, conical, vase, and umbrella crowns,
 - branch bend and droop,
-- upward-growth/phototropism bias,
+- phototropism/upward growth,
 - apical dominance,
 - natural pruning,
-- dead branch probability.
+- dead branches,
+- branch collars.
 
-### Species starting presets
+### Competition / space-colonization growth
 
-Included presets are deliberately parameter presets, not scanned species models:
+When **Space Competition** is enabled, Trees 2.0 samples virtual attraction points throughout the crown volume. Growing branches are pulled toward nearby unclaimed targets while an occupied-space field repels them from existing woody segments.
 
-- Generic Broadleaf
-- Oak
-- Birch
-- Poplar
-- Willow
-- Pine
+New growth consumes nearby attraction points, so later branches preferentially fill empty canopy volume instead of repeatedly crossing existing limbs.
 
-Apply a preset, then tune the individual growth controls.
+Controls include attraction-point count, influence radius, claim radius, branch clearance, attraction strength, avoidance strength, and the highest LOD that should run the competition pass.
 
-## 2D foliage cards
+### Real parent/child junctions
 
-Foliage is not modeled leaf-by-leaf.
+**Fused Manifold** mode runs Blender's voxel remesher on the generated woody shells. Overlapping parent/child tubes become one continuous manifold volume instead of remaining separate intersecting shells.
 
-Each foliage point instances one shared card cluster:
+After fusion Trees 2.0 reprojects the original branch hierarchy and wind attributes using nearest-point lookup. Bark images use box projection in fused mode because remeshing necessarily rebuilds topology.
 
-- **Single**: one bent card
-- **Crossed**: two crossed bent cards
-- **Tri-Cross**: three crossed bent cards
+For distant LODs you can keep the cheaper collar/intersection method.
 
-`Card Bend` introduces a small center fold so close cards do not read as perfectly flat planes.
+### 2D foliage cards
 
-### Texture atlas
+Leaves are not modeled individually. Terminal living branches instance shared foliage cards through Geometry Nodes.
 
-Set:
+Card modes:
 
-- Atlas Columns
-- Atlas Rows
-- Used Cells
+- **Single** — one bent card,
+- **Crossed** — two crossed cards,
+- **Tri-Cross** — three crossed cards.
 
-Trees 2.0 creates one shared source-card object per used atlas cell. Every foliage point receives a `trees2_atlas_index` integer and Geometry Nodes uses **Pick Instance** to choose the corresponding UV-mapped card source.
+A foliage card should normally represent several leaves and small twigs.
 
-Optional maps:
+### Texture-atlas variation
 
-- leaf color + alpha atlas,
-- leaf normal atlas,
-- leaf roughness atlas,
+Configure Atlas Columns, Atlas Rows and Used Cells. Trees 2.0 builds one shared source card per used atlas cell and assigns every foliage point a `trees2_atlas_index` attribute. Geometry Nodes uses **Pick Instance** to choose the corresponding UV-mapped source.
+
+Supported maps:
+
+- leaf color + alpha,
+- leaf normal,
+- leaf roughness,
 - bark color,
 - bark normal.
 
-The same atlas layout must be used by the leaf color/normal/roughness textures.
+### Species and form presets
 
-## Foliage distribution
+The preset library includes more than thirty starting forms, including:
 
-Foliage is concentrated on terminal living branches, with controls for:
+- English, holm and cork oak,
+- birch, beech, maple, ash, elm, linden, chestnut and walnut,
+- poplar, willow, cherry, apple and magnolia,
+- eucalyptus, olive, acacia and baobab,
+- Scots pine, stone pine, spruce, fir, cedar, Italian cypress and coast redwood,
+- dead tree, windswept and sapling forms.
 
-- density,
-- start position along terminal branches,
-- tip bias,
-- cluster spread,
-- up-orientation bias,
-- card scale and random variation.
+These are parameterized shape presets, not scanned species assets.
 
-Dead branches intentionally receive no foliage.
+## LOD pipeline
 
-## LODs
-
-| LOD | Purpose | Behavior |
+| LOD | Purpose | Default behavior |
 | --- | --- | --- |
-| LOD0 | Hero | Full branch depth, highest radial resolution and foliage density |
-| LOD1 | Near | Reduced branch count/segments/cards |
-| LOD2 | Mid | Fewer branch levels and aggressive foliage reduction |
-| LOD3 | Far | Minimal major branches and enlarged sparse cards |
-| LOD4 | Proxy | Ultra-cheap tree-shaped proxy using very few branches/cards |
+| LOD0 | Hero | Full branch depth, competition growth, close foliage |
+| LOD1 | Near | Reduced radial/detail density, optional fused junctions |
+| LOD2 | Mid | Reduced branch depth and foliage |
+| LOD3 | Far | Minimal geometric tree |
+| LOD4 | Impostor | Multi-view baked atlas + very-low-cost billboard mesh |
 
-**Generate LOD Set** places LOD0–LOD4 side-by-side for inspection.
+With **Impostor as LOD4** enabled, **Generate LOD Set** creates LOD0–LOD3 as geometry and automatically bakes LOD4 from the LOD0 source.
 
-LOD4 is currently a geometric proxy. A future milestone is a true baked multi-angle impostor atlas generator.
+The old procedural `LOD4` proxy is still available manually.
+
+## Automatic multi-view impostor baker
+
+Select a generated tree and click **Bake Multi-View Impostor**.
+
+Trees 2.0 will:
+
+1. isolate the selected tree for rendering,
+2. create a temporary orthographic camera and neutral light rig,
+3. render evenly spaced azimuth views with a transparent background,
+4. pack the RGBA views into a PNG atlas,
+5. save atlas metadata on the tree,
+6. create an optional view-selecting billboard mesh,
+7. restore the original camera, render settings and object visibility.
+
+The Blender preview impostor uses only **two triangles per baked view**. A game runtime can go even cheaper by using one camera-facing quad and selecting the atlas cell from camera azimuth.
+
+See [`docs/advanced-growth-impostors.md`](docs/advanced-growth-impostors.md) for the advanced controls and engine metadata.
 
 ## Wind/export attributes
 
-When **Wind Attributes** is enabled the branch mesh contains:
+Branches can contain:
 
-- `trees2_branch_level` (integer)
-- `trees2_branch_id` (integer)
-- `trees2_wind_weight` (float)
-- `trees2_wind_phase` (float)
-- `trees2_stiffness` (float)
+- `trees2_branch_level`
+- `trees2_branch_id`
+- `trees2_wind_weight`
+- `trees2_wind_phase`
+- `trees2_stiffness`
 
 Foliage points contain:
 
-- `trees2_rotation` (quaternion)
-- `trees2_scale` (vector)
-- `trees2_atlas_index` (integer)
-- `trees2_wind_weight` (float)
-- `trees2_wind_phase` (float)
-- `trees2_stiffness` (float)
+- `trees2_rotation`
+- `trees2_scale`
+- `trees2_atlas_index`
+- `trees2_wind_weight`
+- `trees2_wind_phase`
+- `trees2_stiffness`
 
-These are intended as stable metadata for later Blender shaders and game-engine export tooling.
+Fused branches can reproject the branch/wind attributes after voxel remeshing.
 
 ## Export workflow
 
-While authoring, keep **Realize Foliage** disabled. This keeps the Blender scene light because every foliage point is an instance.
+Keep foliage unrealized while authoring. Use **Bake Foliage for Export** only when you need actual card geometry for a mesh export.
 
-When a selected tree is ready for mesh export, use **Bake Foliage for Export**. This applies the Geometry Nodes foliage modifier and removes the now-unused internal card-source collection.
-
-The branch mesh has generated cylindrical UVs. Foliage cards use atlas-cell UVs.
-
-## Existing-tree workflow
-
-Each tree stores a JSON snapshot of its generation parameters on its root collection.
-
-Select a generated tree and use:
-
-- **Load Settings** to restore its parameters into the sidebar,
-- **Regenerate Selected Tree** to rebuild it at the same location.
-
-Texture image pointers are intentionally not serialized into the JSON snapshot.
+For a complete game asset, generate close LODs normally and bake an impostor atlas for the final distance tier.
 
 ## Performance philosophy
 
-A tree should spend geometry where silhouette and parallax need it:
+Spend geometry where it produces visible silhouette and parallax:
 
-- trunk and major branches: actual geometry,
-- progressively thinner branches: fewer radial sides,
-- terminal detail: mostly foliage-card textures,
-- leaves: grouped into card textures instead of modeled individually,
-- far distance: progressively larger/fewer card clusters.
-
-This is designed to avoid the multi-million-polygon vegetation workflow unless the asset genuinely requires that level of source detail.
-
-## Planned next milestones
-
-- true multi-angle impostor baking,
-- branch-to-parent junction blending beyond intersecting collars,
-- crown collision/space colonization so branches avoid occupying the same volume,
-- obstacle/light-volume growth guides,
-- roots and exposed buttress roots,
-- seasonal leaf-loss controls,
-- flower/fruit secondary card layers,
-- wind preview Geometry Nodes/shader,
-- Godot/Unreal-oriented export helpers,
-- batch forest variation generation.
+- trunk and major branches — actual geometry,
+- thin branches — progressively fewer radial sides,
+- terminal detail — mostly foliage-card texture content,
+- leaves — clustered 2D cards,
+- very far distance — multi-view impostor.
 
 ## License
 
