@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 3, 4),
+    "version": (0, 3, 5),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with competition growth, realistic branch profiles, exact junctions, stable LODs, impostors, and GitHub update checks",
+    "description": "Procedural game-ready trees with competition growth, realistic branch profiles, position-aware foliage sizing, exact junctions, stable LODs, impostors, and GitHub update checks",
     "category": "Add Mesh",
 }
 
@@ -17,6 +17,9 @@ from . import (
     branch_profile_ui,
     branch_profiles,
     exact_junctions,
+    foliage_sizing,
+    foliage_sizing_properties,
+    foliage_sizing_ui,
     operators,
     properties,
     ui,
@@ -28,10 +31,14 @@ def register():
     properties.register()
     advanced_properties.register()
     branch_profile_properties.register()
+    foliage_sizing_properties.register()
     advanced_growth.install()
     # Radius profiles run after stochastic/competition growth so they can
     # reshape thickness without changing branch positions or RNG decisions.
     branch_profiles.install()
+    # Position sizing runs after foliage placement and only changes card scale,
+    # preserving the stable master population used by the LOD system.
+    foliage_sizing.install()
     exact_junctions.install()
     # Patch Generate LOD Set before the original operator classes are registered.
     advanced_operators.register()
@@ -39,19 +46,23 @@ def register():
     ui.register()
     advanced_ui.register()
     branch_profile_ui.register()
+    foliage_sizing_ui.register()
     update_checker.register()
 
 
 def unregister():
     update_checker.unregister()
+    foliage_sizing_ui.unregister()
     branch_profile_ui.unregister()
     advanced_ui.unregister()
     ui.unregister()
     operators.unregister()
     advanced_operators.unregister()
     exact_junctions.uninstall()
+    foliage_sizing.uninstall()
     branch_profiles.uninstall()
     advanced_growth.uninstall()
+    foliage_sizing_properties.unregister()
     branch_profile_properties.unregister()
     advanced_properties.unregister()
     properties.unregister()
