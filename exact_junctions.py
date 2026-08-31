@@ -305,15 +305,29 @@ def _exact_bark_material(settings, suffix):
     texcoord.name = "Trees2 Exact Junction Coordinates"
     mapping = nodes.new("ShaderNodeMapping")
     mapping.name = "Trees2 Exact Bark Box Mapping"
-    repeat = max(1.0, settings.bark_uv_scale)
-    mapping.inputs["Scale"].default_value = (4.0 * repeat, 4.0 * repeat, 8.0 * repeat)
-    links.new(texcoord.outputs["Generated"], mapping.inputs["Vector"])
-    for name in ("Bark Color", "Bark Normal"):
+
+    # Generated coordinates are normalized to the full tree bounding box,
+    # which badly stretches bark on long/narrow limbs. Object coordinates use
+    # actual local units, preserving roughly constant texel scale everywhere.
+    repeat = max(0.10, float(settings.bark_uv_scale))
+    mapping.inputs["Scale"].default_value = (repeat, repeat, repeat)
+    links.new(texcoord.outputs["Object"], mapping.inputs["Vector"])
+
+    # Every PBR map must use exactly the same projection. Previously only color
+    # and normal were box-projected while roughness/height/AO still sampled UVs,
+    # producing mismatched highlights that looked metallic.
+    for name in (
+        "Bark Color",
+        "Bark AO",
+        "Bark Roughness",
+        "Bark Normal",
+        "Bark Height",
+    ):
         texture = nodes.get(name)
         if not texture:
             continue
         texture.projection = "BOX"
-        texture.projection_blend = 0.25
+        texture.projection_blend = 0.32
         links.new(mapping.outputs["Vector"], texture.inputs["Vector"])
     return mat
 
