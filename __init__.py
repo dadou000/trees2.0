@@ -23,8 +23,9 @@ def register():
     properties.register()
     advanced_properties.register()
     advanced_growth.install()
-    operators.register()
+    # Patch Generate LOD Set before the original operator classes are registered.
     advanced_operators.register()
+    operators.register()
     ui.register()
     advanced_ui.register()
 
@@ -32,8 +33,8 @@ def register():
 def unregister():
     advanced_ui.unregister()
     ui.unregister()
-    advanced_operators.unregister()
     operators.unregister()
+    advanced_operators.unregister()
     advanced_growth.uninstall()
     advanced_properties.unregister()
     properties.unregister()
