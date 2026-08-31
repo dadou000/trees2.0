@@ -2,11 +2,11 @@
 
 A Blender **5.2 LTS** extension for generating game-ready procedural trees without millions of individually modeled leaves.
 
-Trees 2.0 combines low-sided woody geometry, instanced 2D foliage cards, competition-guided crown growth, manifold branch fusion, generated LODs, wind metadata, and automatic multi-view impostors.
+Trees 2.0 combines low-sided woody geometry, instanced 2D foliage cards, competition-guided crown growth, exact parent/child branch junctions, generated LODs, wind metadata, and automatic multi-view impostors.
 
 ## Status
 
-`0.3.0` is the current development version. Python syntax is checked in CI. Blender-runtime behavior should still be treated as beta until the new voxel-fusion and render-baking paths have been exercised on several Blender 5.2 scenes and hardware configurations.
+`0.3.1` replaces the experimental whole-tree voxel-fusion system with **Exact Boolean Junctions**. Python syntax is checked in CI. Blender-runtime behavior should still be treated as beta until the topology-changing Boolean and render-baking paths have been exercised across several Blender 5.2 scenes.
 
 ## Installation
 
@@ -46,11 +46,23 @@ Controls include attraction-point count, influence radius, claim radius, branch 
 
 ### Real parent/child junctions
 
-**Fused Manifold** mode runs Blender's voxel remesher on the generated woody shells. Overlapping parent/child tubes become one continuous manifold volume instead of remaining separate intersecting shells.
+**Exact Boolean Junctions** replaces the old whole-tree voxel remesh.
 
-After fusion Trees 2.0 reprojects the original branch hierarchy and wind attributes using nearest-point lookup. Bark images use box projection in fused mode because remeshing necessarily rebuilds topology.
+The generator builds the trunk and branch pieces as closed solids. Trunk and major branch levels are then progressively unioned with Blender's **Exact Boolean** solver. This changes topology only at actual intersections and leaves the rest of the trunk surface intact.
 
-For distant LODs you can keep the cheaper collar/intersection method.
+The default hybrid strategy is:
+
+- trunk + primary branches: Exact Boolean,
+- secondary branches: Exact Boolean,
+- thinner/high-order twigs: cheap collar/intersection geometry.
+
+You can control the highest branch hierarchy level and highest LOD that receive exact unions.
+
+If one individual Boolean fails, Trees 2.0 keeps that branch as collar geometry rather than discarding the branch or returning a damaged trunk. If the exact-junction setup itself fails, the entire woody mesh falls back to the known-safe collar path.
+
+After topology changes, Trees 2.0 can reproject the original branch hierarchy and wind attributes using nearest-point lookup. Bark image textures use box projection in Exact Boolean mode so junction topology changes do not produce broken UV patches.
+
+The removed experimental voxel-fusion mode is no longer exposed because it could perforate otherwise valid trunk geometry.
 
 ### 2D foliage cards
 
@@ -93,9 +105,9 @@ These are parameterized shape presets, not scanned species assets.
 
 | LOD | Purpose | Default behavior |
 | --- | --- | --- |
-| LOD0 | Hero | Full branch depth, competition growth, close foliage |
-| LOD1 | Near | Reduced radial/detail density, optional fused junctions |
-| LOD2 | Mid | Reduced branch depth and foliage |
+| LOD0 | Hero | Full branch depth, competition growth, Exact Boolean major junctions |
+| LOD1 | Near | Reduced radial/detail density, Exact Boolean major junctions |
+| LOD2 | Mid | Reduced branch depth and foliage, collar junctions |
 | LOD3 | Far | Minimal geometric tree |
 | LOD4 | Impostor | Multi-view baked atlas + very-low-cost billboard mesh |
 
@@ -119,7 +131,7 @@ Trees 2.0 will:
 
 The Blender preview impostor uses only **two triangles per baked view**. A game runtime can go even cheaper by using one camera-facing quad and selecting the atlas cell from camera azimuth.
 
-See [`docs/advanced-growth-impostors.md`](docs/advanced-growth-impostors.md) for the advanced controls and engine metadata.
+See [`docs/advanced-growth-impostors.md`](docs/advanced-growth-impostors.md) for advanced controls and engine metadata.
 
 ## Wind/export attributes
 
@@ -140,7 +152,7 @@ Foliage points contain:
 - `trees2_wind_phase`
 - `trees2_stiffness`
 
-Fused branches can reproject the branch/wind attributes after voxel remeshing.
+Exact Boolean branches can reproject the branch/wind attributes after topology changes.
 
 ## Export workflow
 
@@ -153,7 +165,8 @@ For a complete game asset, generate close LODs normally and bake an impostor atl
 Spend geometry where it produces visible silhouette and parallax:
 
 - trunk and major branches — actual geometry,
-- thin branches — progressively fewer radial sides,
+- major visible junctions — exact solid unions,
+- thin branches — progressively fewer radial sides and cheap collars,
 - terminal detail — mostly foliage-card texture content,
 - leaves — clustered 2D cards,
 - very far distance — multi-view impostor.
