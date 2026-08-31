@@ -13,6 +13,7 @@ from . import (
     advanced_operators,
     advanced_properties,
     advanced_ui,
+    appearance_state,
     branch_profile_properties,
     branch_profile_ui,
     branch_profiles,
@@ -37,6 +38,7 @@ def register():
     branch_profile_properties.register()
     foliage_sizing_properties.register()
     pbr_properties.register()
+    appearance_state.install()
     advanced_growth.install()
     # Radius profiles run after stochastic/competition growth so they can
     # reshape thickness without changing branch positions or RNG decisions.
@@ -75,6 +77,7 @@ def unregister():
     foliage_sizing.uninstall()
     branch_profiles.uninstall()
     advanced_growth.uninstall()
+    appearance_state.uninstall()
     pbr_properties.unregister()
     foliage_sizing_properties.unregister()
     branch_profile_properties.unregister()
