@@ -1,6 +1,6 @@
 schema_version = "1.0.0"
 id = "trees2"
-version = "0.4.0"
+version = "0.4.1"
 name = "Trees 2.0"
 tagline = "Procedural game-ready trees with species-aware PBR synthesis"
 maintainer = "dadou000"
@@ -10,5 +10,5 @@ license = ["SPDX:GPL-3.0-or-later"]
 tags = ["Modeling", "Geometry Nodes"]
 
 [permissions]
-network = "Check GitHub for newer Trees 2.0 versions"
-files = "Write procedural PBR textures and baked impostor atlases to disk"
+network = "Check GitHub and download newer Trees 2.0 versions for one-click updates"
+files = "Write procedural PBR textures, baked impostor atlases, and temporary update packages to disk"
