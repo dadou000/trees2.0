@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 3, 0),
+    "version": (0, 3, 1),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with competition growth, fused branches, instanced foliage, and impostor LODs",
+    "description": "Procedural game-ready trees with competition growth, exact branch junctions, instanced foliage, and impostor LODs",
     "category": "Add Mesh",
 }
 
@@ -13,6 +13,7 @@ from . import (
     advanced_operators,
     advanced_properties,
     advanced_ui,
+    exact_junctions,
     operators,
     properties,
     ui,
@@ -23,6 +24,7 @@ def register():
     properties.register()
     advanced_properties.register()
     advanced_growth.install()
+    exact_junctions.install()
     # Patch Generate LOD Set before the original operator classes are registered.
     advanced_operators.register()
     operators.register()
@@ -35,6 +37,7 @@ def unregister():
     ui.unregister()
     operators.unregister()
     advanced_operators.unregister()
+    exact_junctions.uninstall()
     advanced_growth.uninstall()
     advanced_properties.unregister()
     properties.unregister()
