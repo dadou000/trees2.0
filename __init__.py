@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 4, 1),
+    "version": (0, 4, 2),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with species PBR synthesis, competition growth, realistic branch profiles, position-aware foliage, exact junctions, stable LODs, impostors, and one-click GitHub updates",
+    "description": "Procedural game-ready trees with live species PBR synthesis, competition growth, realistic branch profiles, position-aware foliage, exact junctions, stable LODs, impostors, and one-click GitHub updates",
     "category": "Add Mesh",
 }
 
@@ -21,6 +21,7 @@ from . import (
     foliage_sizing_properties,
     foliage_sizing_ui,
     operators,
+    pbr_live_apply,
     pbr_properties,
     pbr_ui,
     procedural_pbr,
@@ -48,6 +49,9 @@ def register():
     advanced_operators.register()
     operators.register()
     procedural_pbr.register()
+    # Wrap PBR generation after its operators exist so generated maps are also
+    # pushed into the currently selected tree and its hidden card sources.
+    pbr_live_apply.install()
     ui.register()
     advanced_ui.register()
     branch_profile_ui.register()
@@ -63,6 +67,7 @@ def unregister():
     branch_profile_ui.unregister()
     advanced_ui.unregister()
     ui.unregister()
+    pbr_live_apply.uninstall()
     procedural_pbr.unregister()
     operators.unregister()
     advanced_operators.unregister()
