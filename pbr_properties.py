@@ -38,11 +38,11 @@ class TREES2_PG_PBRSettings(bpy.types.PropertyGroup):
     generate_bark: BoolProperty(name="Generate Bark PBR", default=True)
     auto_assign: BoolProperty(
         name="Assign Generated Maps", default=True,
-        description="Assign generated images to the active Trees 2.0 settings",
+        description="Assign generated images to the active Trees 2.0 settings and selected tree",
     )
     neutralize_tints: BoolProperty(
-        name="Use Generated Albedo Colors", default=True,
-        description="Set leaf and bark tint multipliers to white after assigning generated albedo",
+        name="Use Raw Generated Albedo Colors", default=False,
+        description="Legacy mode: ignore the tree's chosen colors and use generated species albedo directly",
     )
     pack_images: BoolProperty(
         name="Pack Images in .blend", default=False,
