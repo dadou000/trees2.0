@@ -37,13 +37,13 @@ class TREES2_PT_Junctions(bpy.types.Panel):
         layout = self.layout
         a = context.scene.trees2_advanced_settings
         layout.prop(a, "junction_mode")
-        if a.junction_mode == "VOXEL_FUSE":
-            layout.prop(a, "junction_voxel_size")
-            layout.prop(a, "junction_adaptivity")
-            layout.prop(a, "junction_fuse_lod_max")
+        if a.junction_mode == "EXACT_BOOLEAN":
+            layout.prop(a, "junction_boolean_level_max")
+            layout.prop(a, "junction_boolean_lod_max")
             layout.prop(a, "reproject_branch_attributes")
-            layout.label(text="Fused mode outputs one manifold woody volume.", icon="INFO")
-            layout.label(text="Smaller voxels preserve thinner twigs but cost more.")
+            layout.label(text="No whole-tree voxel remesh is used.", icon="INFO")
+            layout.label(text="Major junctions use Exact Boolean union.")
+            layout.label(text="Thin twigs fall back to cheap collars.")
 
 
 class TREES2_PT_Impostor(bpy.types.Panel):
