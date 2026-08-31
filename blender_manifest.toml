@@ -1,6 +1,6 @@
 schema_version = "1.0.0"
 id = "trees2"
-version = "0.3.3"
+version = "0.3.4"
 name = "Trees 2.0"
 tagline = "Procedural game-ready trees with realistic branch profiles and instanced foliage"
 maintainer = "dadou000"
@@ -10,4 +10,5 @@ license = ["SPDX:GPL-3.0-or-later"]
 tags = ["Modeling", "Geometry Nodes"]
 
 [permissions]
+network = "Check GitHub for newer Trees 2.0 versions"
 files = "Write baked impostor atlases to disk"
