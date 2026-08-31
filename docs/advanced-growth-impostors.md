@@ -1,6 +1,6 @@
 # Trees 2.0 — Advanced Growth and LOD Pipeline
 
-Version 0.3.0 adds three production-oriented systems on top of the existing procedural tree generator.
+Version 0.3.1 keeps the competition-growth and impostor systems from 0.3.0 and replaces the experimental voxel-fusion junction system with Exact Boolean Junctions.
 
 ## Competition / space-colonization growth
 
@@ -19,11 +19,45 @@ Controls:
 
 The algorithm keeps the species preset's crown shape, apical dominance, droop, phototropism and branch distribution as priors. Competition modifies local growth direction rather than replacing species logic.
 
-## Manifold parent/child branch junctions
+## Parent/child branch junctions
 
-**Fused Manifold** junction mode first builds the normal low-sided branch shells and then uses Blender 5.2's voxel remesher to turn the overlapping shells into one continuous manifold woody volume. Internal overlapping faces are removed, so child branches are no longer separate tubes intersecting the parent tube.
+### Exact Boolean Junctions
 
-After remeshing, Trees 2.0 uses nearest-point reprojection to restore:
+This is now the production junction mode.
+
+The generator first creates each woody branch as a closed solid. The trunk is used as the initial target and child branches are processed in hierarchy order. Major branch levels are progressively unioned into the growing trunk with Blender's **Exact Boolean** solver.
+
+This avoids the failure mode of the previous whole-tree voxel remesh: the trunk is not globally resampled, so distant parts of the surface cannot become perforated merely because a local branch junction needs blending.
+
+Controls:
+
+- **Exact Through Branch Level** — highest branch hierarchy level that receives true Boolean union.
+- **Exact Through LOD** — highest LOD that pays for exact junction construction.
+- **Reproject Attributes** — restores branch hierarchy and wind metadata after topology changes.
+
+The default is a hybrid tree:
+
+- trunk, primary and secondary branch junctions: Exact Boolean,
+- finer twigs: collar/intersection geometry.
+
+That concentrates expensive topology work where players can actually see it.
+
+### Failure handling
+
+Each branch union is isolated. If one Boolean fails, that branch is retained and merged back as collar geometry. A failed union therefore cannot delete the branch or corrupt the rest of the trunk.
+
+If the exact-junction setup fails before processing can complete, Trees 2.0 discards the partial result and rebuilds the known-safe collar version instead.
+
+Generated metadata includes:
+
+- `trees2_junction_mode`
+- `trees2_exact_boolean_junctions`
+- `trees2_collar_fallback_branches`
+- `trees2_boolean_failures`
+- `trees2_boolean_level_max`
+- `trees2_boolean_lod_max`
+
+After topology changes Trees 2.0 can restore:
 
 - `trees2_branch_level`
 - `trees2_branch_id`
@@ -31,9 +65,7 @@ After remeshing, Trees 2.0 uses nearest-point reprojection to restore:
 - `trees2_wind_phase`
 - `trees2_stiffness`
 
-Bark image textures use box projection in fused mode because voxel remeshing rebuilds topology and destroys the original branch UV layout.
-
-Use **Voxel Size** for the detail/cost tradeoff. Fused junctions are normally limited to close LODs; distant LODs keep cheap collars because their intersections are not visible.
+Bark image textures use box projection in Exact Boolean mode to avoid UV discontinuities at newly-created junction faces.
 
 ## Automatic multi-view impostor LOD
 
@@ -63,8 +95,8 @@ A runtime shader can replace the Blender preview mesh with one camera-facing qua
 
 With **Impostor as LOD4** enabled, **Generate LOD Set** creates:
 
-- LOD0 — hero
-- LOD1 — near
+- LOD0 — hero, including Exact Boolean major junctions by default
+- LOD1 — near, including Exact Boolean major junctions by default
 - LOD2 — mid
 - LOD3 — far geometry
 - LOD4 — automatically baked multi-view impostor
