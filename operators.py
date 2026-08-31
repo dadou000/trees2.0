@@ -4,7 +4,9 @@ import random
 import bpy
 
 from .generator import build_tree, remove_tree_collection
+from .pbr_profiles import species_profile
 from .presets import apply_preset
+from .species_appearance import appearance_profile
 
 
 def _active_tree_collection(context):
@@ -31,10 +33,22 @@ def _tree_objects(root):
     return branch, foliage
 
 
+def _apply_species_colors(settings, species):
+    appearance = appearance_profile(species, species_profile(species))
+    leaf = appearance.get("default_leaf_tint")
+    bark = appearance.get("default_bark_tint")
+    if leaf and appearance.get("leaf_shape") != "NONE":
+        settings.leaf_tint = (float(leaf[0]), float(leaf[1]), float(leaf[2]), 1.0)
+    if bark:
+        settings.bark_color = (float(bark[0]), float(bark[1]), float(bark[2]), 1.0)
+    settings.pbr_respect_tree_colors = True
+    return appearance
+
+
 class TREES2_OT_ApplyPreset(bpy.types.Operator):
     bl_idname = "trees2.apply_preset"
     bl_label = "Apply Species Preset"
-    bl_description = "Apply the selected species preset while keeping texture assignments and the seed"
+    bl_description = "Apply the selected species structure, correct foliage/trunk colors and morphology defaults while keeping texture assignments and seed"
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
@@ -42,7 +56,11 @@ class TREES2_OT_ApplyPreset(bpy.types.Operator):
         if not apply_preset(settings, settings.species_preset):
             self.report({"WARNING"}, "Unknown Trees 2.0 preset")
             return {"CANCELLED"}
-        self.report({"INFO"}, f"Applied {settings.species_preset.title()} preset")
+        appearance = _apply_species_colors(settings, settings.species_preset)
+        self.report(
+            {"INFO"},
+            f"Applied {settings.species_preset.title()} preset - {appearance.get('morphology_label', 'species foliage')}",
+        )
         return {"FINISHED"}
 
 
