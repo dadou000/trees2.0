@@ -1,6 +1,6 @@
 schema_version = "1.0.0"
 id = "trees2"
-version = "0.2.1"
+version = "0.3.0"
 name = "Trees 2.0"
 tagline = "Procedural game-ready trees with instanced foliage cards"
 maintainer = "dadou000"
@@ -8,3 +8,6 @@ type = "add-on"
 blender_version_min = "5.2.0"
 license = ["SPDX:GPL-3.0-or-later"]
 tags = ["Modeling", "Geometry Nodes"]
+
+[permissions]
+files = "Write baked impostor atlases to disk"
