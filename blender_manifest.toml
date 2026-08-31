@@ -1,6 +1,6 @@
 schema_version = "1.0.0"
 id = "trees2"
-version = "0.2.0"
+version = "0.2.1"
 name = "Trees 2.0"
 tagline = "Procedural game-ready trees with instanced foliage cards"
 maintainer = "dadou000"
