@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 3, 3),
+    "version": (0, 3, 4),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with competition growth, realistic branch profiles, exact junctions, instanced foliage, and impostor LODs",
+    "description": "Procedural game-ready trees with competition growth, realistic branch profiles, exact junctions, stable LODs, impostors, and GitHub update checks",
     "category": "Add Mesh",
 }
 
@@ -20,6 +20,7 @@ from . import (
     operators,
     properties,
     ui,
+    update_checker,
 )
 
 
@@ -38,9 +39,11 @@ def register():
     ui.register()
     advanced_ui.register()
     branch_profile_ui.register()
+    update_checker.register()
 
 
 def unregister():
+    update_checker.unregister()
     branch_profile_ui.unregister()
     advanced_ui.unregister()
     ui.unregister()
