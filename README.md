@@ -1,82 +1,186 @@
 # Trees 2.0
 
-A Blender **5.2 LTS** extension for generating procedural, game-oriented trees without millions of leaf polygons.
+A Blender **5.2 LTS** extension for generating game-ready procedural trees without millions of individually modeled leaves.
 
-The generator uses:
+The design target is a traditional efficient vegetation pipeline brought into modern Blender:
 
-- Low-sided procedural branch meshes.
-- Recursive seeded branching.
-- Terminal-branch foliage distribution.
-- One, two, or three crossed **2D leaf cards** per foliage point.
-- Geometry Nodes **instances** for the foliage, so the source card mesh is shared instead of duplicated as separate Blender objects.
-- Four LOD presets that reduce branch count, branch resolution, radial sides, and foliage density.
-- Optional RGBA leaf-atlas textures.
+- low-sided procedural branch meshes,
+- shared 2D/bent foliage cards,
+- Geometry Nodes instancing,
+- texture-atlas variation,
+- deterministic seeds,
+- generated LODs,
+- engine-oriented wind attributes,
+- export-time foliage realization only when needed.
 
-## Current status
+## Status
 
-`0.1.0` is the first functional generator. It is intended as the base for species presets, more biologically accurate branching, wind attributes, atlasing tools, automatic impostors, and game-engine export helpers.
+`0.2.0` is an authoring prototype intended for testing in Blender 5.2 LTS. Python syntax is checked in CI, but Blender-runtime behavior should still be treated as beta until exercised across several 5.2 builds and render/export paths.
 
-## Install in Blender 5.2 LTS
+## Installation
 
-1. Download this repository as a ZIP, or build an extension ZIP with Blender's extension tooling.
-2. In Blender open **Edit > Preferences > Extensions**.
-3. Use **Install from Disk** and select the extension ZIP.
-4. Enable **Trees 2.0** if required.
-5. In the 3D View open the sidebar (`N`) and select the **Trees 2.0** tab.
+1. Download/clone the repository.
+2. Package the extension so `blender_manifest.toml` and `__init__.py` are at the ZIP root.
+3. In Blender 5.2: **Edit > Preferences > Get Extensions > Install from Disk**.
+4. Enable **Trees 2.0** if needed.
+5. Open the 3D View sidebar (`N`) and choose **Trees 2.0**.
 
-The ZIP root must contain `blender_manifest.toml` and `__init__.py`.
+## Generator model
 
-## Basic workflow
+### Structure
 
-1. Set the 3D cursor where the tree should be created.
-2. Choose a seed and structural parameters.
-3. Optionally select an RGBA leaf atlas in **Leaf Atlas**.
-4. Keep **Realize Foliage** disabled while authoring for the lightest scene.
-5. Click **Create Procedural Tree**.
-6. Select the generated branch object, alter settings, then click **Regenerate Selected Tree**.
-7. Use **Generate LOD Set** to produce LOD0-LOD3 side-by-side for visual comparison.
+The generator builds a deterministic branch skeleton from a seed. Branches are converted directly to low-sided mesh tubes rather than high-resolution sculpted cylinders.
 
-## Foliage architecture
+The current growth model includes:
 
-Each generated tree has a hidden source leaf-card mesh. The visible foliage object contains points plus per-point rotation and scale attributes. A Geometry Nodes modifier instances the shared card mesh onto those points.
+- root flare,
+- trunk taper and irregularity,
+- 1–4 branch levels,
+- golden-angle phyllotaxis, random, or whorled distribution,
+- crown profiles (round, oval, columnar, conical, vase, umbrella),
+- branch collars,
+- branch bend and droop,
+- upward-growth/phototropism bias,
+- apical dominance,
+- natural pruning,
+- dead branch probability.
 
-For a crossed card cluster:
+### Species starting presets
 
-- 1 foliage point = 2 quads = 4 render triangles.
-- 2,000 foliage points = about 8,000 foliage triangles when realized.
-- While unrealized, Blender keeps them as instances.
+Included presets are deliberately parameter presets, not scanned species models:
 
-This is deliberately different from scanned foliage where every leaf can contain many triangles.
+- Generic Broadleaf
+- Oak
+- Birch
+- Poplar
+- Willow
+- Pine
 
-## Leaf atlas
+Apply a preset, then tune the individual growth controls.
 
-The atlas should normally be an RGBA image with transparent background. The image color drives Base Color and its alpha drives Principled BSDF Alpha. Trees 2.0 uses Blender's dithered material transparency and renders both sides of the cards.
+## 2D foliage cards
 
-For best game results, use leaf-cluster textures that represent multiple leaves and small twigs on one card instead of one isolated leaf per card.
+Foliage is not modeled leaf-by-leaf.
 
-## LOD presets
+Each foliage point instances one shared card cluster:
 
-| LOD | Intended use | Behavior |
-|---|---|---|
-| LOD0 | Hero / close | Full branches and foliage |
-| LOD1 | Near | Fewer branches, segments and cards |
-| LOD2 | Mid | Reduced recursive depth and foliage |
-| LOD3 | Far | Very low branch and card count |
+- **Single**: one bent card
+- **Crossed**: two crossed bent cards
+- **Tri-Cross**: three crossed bent cards
 
-The exact polygon count depends on the generator settings and card style.
+`Card Bend` introduces a small center fold so close cards do not read as perfectly flat planes.
 
-## Planned
+### Texture atlas
 
-- Species preset system.
-- Crown shapes and apical-dominance models.
-- Better branch junction geometry.
-- Automatic bark UVs and texture variation.
-- Leaf atlas cell randomization.
-- Wind stiffness / branch hierarchy attributes.
-- Automatic billboard/impostor LOD.
-- Batch forest variation generator.
-- GLTF/game-engine export helpers.
-- Geometry Nodes-native live-edit mode.
+Set:
+
+- Atlas Columns
+- Atlas Rows
+- Used Cells
+
+Trees 2.0 creates one shared source-card object per used atlas cell. Every foliage point receives a `trees2_atlas_index` integer and Geometry Nodes uses **Pick Instance** to choose the corresponding UV-mapped card source.
+
+Optional maps:
+
+- leaf color + alpha atlas,
+- leaf normal atlas,
+- leaf roughness atlas,
+- bark color,
+- bark normal.
+
+The same atlas layout must be used by the leaf color/normal/roughness textures.
+
+## Foliage distribution
+
+Foliage is concentrated on terminal living branches, with controls for:
+
+- density,
+- start position along terminal branches,
+- tip bias,
+- cluster spread,
+- up-orientation bias,
+- card scale and random variation.
+
+Dead branches intentionally receive no foliage.
+
+## LODs
+
+| LOD | Purpose | Behavior |
+| --- | --- | --- |
+| LOD0 | Hero | Full branch depth, highest radial resolution and foliage density |
+| LOD1 | Near | Reduced branch count/segments/cards |
+| LOD2 | Mid | Fewer branch levels and aggressive foliage reduction |
+| LOD3 | Far | Minimal major branches and enlarged sparse cards |
+| LOD4 | Proxy | Ultra-cheap tree-shaped proxy using very few branches/cards |
+
+**Generate LOD Set** places LOD0–LOD4 side-by-side for inspection.
+
+LOD4 is currently a geometric proxy. A future milestone is a true baked multi-angle impostor atlas generator.
+
+## Wind/export attributes
+
+When **Wind Attributes** is enabled the branch mesh contains:
+
+- `trees2_branch_level` (integer)
+- `trees2_branch_id` (integer)
+- `trees2_wind_weight` (float)
+- `trees2_wind_phase` (float)
+- `trees2_stiffness` (float)
+
+Foliage points contain:
+
+- `trees2_rotation` (quaternion)
+- `trees2_scale` (vector)
+- `trees2_atlas_index` (integer)
+- `trees2_wind_weight` (float)
+- `trees2_wind_phase` (float)
+- `trees2_stiffness` (float)
+
+These are intended as stable metadata for later Blender shaders and game-engine export tooling.
+
+## Export workflow
+
+While authoring, keep **Realize Foliage** disabled. This keeps the Blender scene light because every foliage point is an instance.
+
+When a selected tree is ready for mesh export, use **Bake Foliage for Export**. This applies the Geometry Nodes foliage modifier and removes the now-unused internal card-source collection.
+
+The branch mesh has generated cylindrical UVs. Foliage cards use atlas-cell UVs.
+
+## Existing-tree workflow
+
+Each tree stores a JSON snapshot of its generation parameters on its root collection.
+
+Select a generated tree and use:
+
+- **Load Settings** to restore its parameters into the sidebar,
+- **Regenerate Selected Tree** to rebuild it at the same location.
+
+Texture image pointers are intentionally not serialized into the JSON snapshot.
+
+## Performance philosophy
+
+A tree should spend geometry where silhouette and parallax need it:
+
+- trunk and major branches: actual geometry,
+- progressively thinner branches: fewer radial sides,
+- terminal detail: mostly foliage-card textures,
+- leaves: grouped into card textures instead of modeled individually,
+- far distance: progressively larger/fewer card clusters.
+
+This is designed to avoid the multi-million-polygon vegetation workflow unless the asset genuinely requires that level of source detail.
+
+## Planned next milestones
+
+- true multi-angle impostor baking,
+- branch-to-parent junction blending beyond intersecting collars,
+- crown collision/space colonization so branches avoid occupying the same volume,
+- obstacle/light-volume growth guides,
+- roots and exposed buttress roots,
+- seasonal leaf-loss controls,
+- flower/fruit secondary card layers,
+- wind preview Geometry Nodes/shader,
+- Godot/Unreal-oriented export helpers,
+- batch forest variation generation.
 
 ## License
 
