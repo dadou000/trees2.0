@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 4, 3),
+    "version": (0, 4, 4),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with corrected vegetation PBR shading, live species synthesis, competition growth, realistic branch profiles, position-aware foliage, exact junctions, stable LODs, impostors, and one-click GitHub updates",
+    "description": "Procedural game-ready trees with species-correct foliage morphology, authoritative tree colors, PBR synthesis, competition growth, realistic branch profiles, stable LODs, impostors, and one-click GitHub updates",
     "category": "Add Mesh",
 }
 
