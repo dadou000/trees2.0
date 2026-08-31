@@ -80,6 +80,10 @@ class TREES2_PG_PBRSettings(bpy.types.PropertyGroup):
         description="Also pack generated PNGs into the current Blender file",
     )
 
+    generated_bark_roughness: PointerProperty(name="Generated Bark Roughness", type=bpy.types.Image)
+    generated_bark_height: PointerProperty(name="Generated Bark Height", type=bpy.types.Image)
+    generated_bark_ao: PointerProperty(name="Generated Bark AO", type=bpy.types.Image)
+
 
 CLASSES = (TREES2_PG_PBRSettings,)
 
