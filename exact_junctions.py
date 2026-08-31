@@ -30,6 +30,11 @@ def _remove_object(obj):
         bpy.data.meshes.remove(data)
 
 
+def _remove_mesh_if_unused(mesh):
+    if mesh and getattr(mesh, "users", 0) == 0 and mesh.name in bpy.data.meshes:
+        bpy.data.meshes.remove(mesh)
+
+
 def _seal_mesh(mesh):
     """Close every boundary loop so each branch piece is a valid Boolean solid."""
     bm = bmesh.new()
@@ -62,8 +67,52 @@ def _make_piece(collection, branch, settings, bark_material, suffix):
     return obj
 
 
-def _apply_union(target, operand, label):
-    """Union one already-closed branch solid into the growing woody mesh."""
+def _trunk_bounds(trunk):
+    z_values = [point.z for point, _radius in trunk.get("points", ())]
+    if not z_values:
+        return 0.0, 0.0
+    return min(z_values), max(z_values)
+
+
+def _mesh_preserves_trunk(mesh, trunk_min_z, trunk_max_z):
+    """Reject Boolean results that silently delete/collapse the trunk."""
+    if mesh is None or len(mesh.vertices) < 8 or len(mesh.polygons) < 4:
+        return False
+
+    z_values = [vertex.co.z for vertex in mesh.vertices]
+    if not z_values:
+        return False
+    result_min = min(z_values)
+    result_max = max(z_values)
+    trunk_span = max(trunk_max_z - trunk_min_z, 1e-5)
+    tolerance = max(0.03 * trunk_span, 0.02)
+
+    if result_min > trunk_min_z + tolerance:
+        return False
+    if result_max < trunk_max_z - tolerance:
+        return False
+    if result_max - result_min < trunk_span * 0.92:
+        return False
+
+    # Require actual geometry near both the root and the upper trunk, not just
+    # a stray vertex from another branch that happens to match the Z extent.
+    base_limit = trunk_min_z + trunk_span * 0.08
+    top_limit = trunk_max_z - trunk_span * 0.08
+    base_vertices = sum(1 for vertex in mesh.vertices if vertex.co.z <= base_limit)
+    top_vertices = sum(1 for vertex in mesh.vertices if vertex.co.z >= top_limit)
+    return base_vertices >= 3 and top_vertices >= 1
+
+
+def _restore_mesh_backup(target, backup, damaged_mesh):
+    target.data = backup
+    _remove_mesh_if_unused(damaged_mesh)
+
+
+def _apply_union(target, operand, label, trunk_min_z, trunk_max_z):
+    """Union one closed branch solid and verify the trunk survived intact."""
+    backup = target.data.copy()
+    damaged_mesh = target.data
+
     modifier = target.modifiers.new(name=label, type="BOOLEAN")
     modifier.operation = "UNION"
     modifier.object = operand
@@ -78,11 +127,20 @@ def _apply_union(target, operand, label):
     target.hide_set(False)
     target.select_set(True)
     bpy.context.view_layer.objects.active = target
+
     try:
         bpy.ops.object.modifier_apply(modifier=modifier.name)
+        if not _mesh_preserves_trunk(target.data, trunk_min_z, trunk_max_z):
+            failed_mesh = target.data
+            _restore_mesh_backup(target, backup, failed_mesh)
+            raise RuntimeError("Boolean union failed trunk-survival validation")
+        _remove_mesh_if_unused(backup)
     except Exception:
         if modifier.name in target.modifiers:
             target.modifiers.remove(modifier)
+        if target.data is not backup:
+            current = target.data
+            _restore_mesh_backup(target, backup, current)
         raise
 
 
@@ -131,8 +189,6 @@ def _exact_boolean_branch_mesh(collection, branches, settings, bark_material, su
     ):
         return _PREVIOUS_BRANCH_MESH(collection, branches, settings, bark_material, suffix)
 
-    # advanced_growth installs before this module, so its original builder is the
-    # clean pre-fusion branch-tube generator.
     if advanced_growth._ORIGINAL_BRANCH_MESH is None:
         return _PREVIOUS_BRANCH_MESH(collection, branches, settings, bark_material, suffix)
 
@@ -149,11 +205,15 @@ def _exact_boolean_branch_mesh(collection, branches, settings, bark_material, su
         )
 
         trunk = min(branches, key=lambda b: (b.get("level", 0), b.get("id", 0)))
+        trunk_min_z, trunk_max_z = _trunk_bounds(trunk)
         target = _make_piece(
             collection, trunk, settings, bark_material, f"{suffix}_ExactTrunk"
         )
         target.name = f"Trees2_Branches_{suffix}"
         target.data.name = f"Trees2_Branches_{suffix}"
+
+        if not _mesh_preserves_trunk(target.data, trunk_min_z, trunk_max_z):
+            raise RuntimeError("Initial sealed trunk failed trunk-survival validation")
 
         children = [branch for branch in branches if branch is not trunk]
         children.sort(key=lambda b: (b.get("level", 0), b.get("id", 0)))
@@ -178,22 +238,23 @@ def _exact_boolean_branch_mesh(collection, branches, settings, bark_material, su
                     target,
                     piece,
                     f"Trees2 Exact Junction {branch.get('id', 0):04d}",
+                    trunk_min_z,
+                    trunk_max_z,
                 )
                 exact_count += 1
                 _remove_object(piece)
             except Exception:
-                # Never discard a branch because one Boolean failed. Keep the
-                # original closed branch geometry and merge it as a collar-style
-                # fallback at the end.
+                # A Boolean is allowed to fail locally, but never to damage the
+                # trunk. Keep that branch as a safe collar/intersection fallback.
                 failed_count += 1
                 fallback_objects.append(piece)
 
-        # Thin/high-order branches intentionally stay as intersecting collar
-        # geometry. One object join keeps the final tree export-friendly.
         _join_objects(target, fallback_objects)
         fallback_count = len(fallback_objects)
 
         mesh = target.data
+        if not _mesh_preserves_trunk(mesh, trunk_min_z, trunk_max_z):
+            raise RuntimeError("Final exact-junction mesh failed trunk-survival validation")
         if not mesh.materials:
             mesh.materials.append(bark_material)
         for polygon in mesh.polygons:
@@ -209,10 +270,9 @@ def _exact_boolean_branch_mesh(collection, branches, settings, bark_material, su
         target["trees2_boolean_failures"] = failed_count
         target["trees2_boolean_level_max"] = max_level
         target["trees2_boolean_lod_max"] = int(advanced.junction_boolean_lod_max)
+        target["trees2_trunk_validated"] = True
         return target
     except Exception as exc:
-        # Catastrophic setup failure: remove partial geometry and fall back to
-        # the known-safe collar path rather than returning a damaged tree.
         if _object_exists(target):
             _remove_object(target)
         for obj in fallback_objects:
@@ -223,6 +283,7 @@ def _exact_boolean_branch_mesh(collection, branches, settings, bark_material, su
         )
         fallback["trees2_junction_mode"] = "EXACT_BOOLEAN_FAILED"
         fallback["trees2_junction_error"] = str(exc)
+        fallback["trees2_trunk_validated"] = False
         return fallback
     finally:
         _restore_selection(previous_active, previous_selected, target)
