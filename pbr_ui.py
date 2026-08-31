@@ -43,9 +43,11 @@ class TREES2_PT_ProceduralPBR(bpy.types.Panel):
         options.prop(pbr, "auto_assign")
         if pbr.auto_assign:
             options.prop(pbr, "neutralize_tints")
+            options.label(text="Generated maps are applied to the selected tree.", icon="CHECKMARK")
         options.prop(pbr, "pack_images")
 
         layout.operator("trees2.generate_procedural_pbr", icon="NODE_MATERIAL")
+        layout.operator("trees2.apply_current_pbr", icon="MATERIAL")
         layout.operator("trees2.open_pbr_folder", icon="FILE_FOLDER")
         layout.label(text="Generation writes exportable PNG files.", icon="INFO")
 
