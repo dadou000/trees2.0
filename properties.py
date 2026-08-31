@@ -89,17 +89,33 @@ class TREES2_PG_Settings(bpy.types.PropertyGroup):
     atlas_rows: IntProperty(name="Atlas Rows", default=1, min=1, max=16)
     atlas_variants: IntProperty(name="Used Cells", default=1, min=1, max=256)
     leaf_tint: FloatVectorProperty(
-        name="Leaf Tint", subtype="COLOR", size=4,
+        name="Foliage Color", subtype="COLOR", size=4,
         default=(0.12, 0.32, 0.055, 1.0), min=0.0, max=1.0,
+        description="Final foliage color; procedural atlases preserve this hue while adding species detail",
     )
 
     bark_image: PointerProperty(name="Bark Color", type=bpy.types.Image)
     bark_normal_image: PointerProperty(name="Bark Normal", type=bpy.types.Image)
     bark_color: FloatVectorProperty(
-        name="Bark Tint", subtype="COLOR", size=4,
+        name="Trunk Color", subtype="COLOR", size=4,
         default=(0.16, 0.07, 0.025, 1.0), min=0.0, max=1.0,
+        description="Final trunk/bark color; procedural bark preserves this hue while adding detail",
     )
     bark_uv_scale: FloatProperty(name="Bark UV Scale", default=1.0, min=0.05, max=20.0)
+
+    pbr_respect_tree_colors: BoolProperty(
+        name="Respect Tree Colors",
+        default=True,
+        description="Keep Foliage Color and Trunk Color authoritative while using generated albedo for texture detail",
+    )
+    pbr_species_color_influence: FloatProperty(
+        name="Species Hue Influence",
+        default=0.10,
+        min=0.0,
+        max=1.0,
+        subtype="FACTOR",
+        description="Amount of generated species hue blended back into the authoritative tree colors",
+    )
 
     generate_wind_attributes: BoolProperty(
         name="Wind Attributes", default=True,
