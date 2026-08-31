@@ -1,7 +1,7 @@
 import bpy
 from mathutils import Vector
 
-from . import generator, operators
+from . import generator, operators, stable_lods
 from .impostor import bake_impostor
 
 
@@ -49,27 +49,54 @@ class TREES2_OT_BakeImpostor(bpy.types.Operator):
 
 
 def _advanced_lod_execute(self, context):
+    """Generate nested LODs from one master skeleton and foliage population."""
     advanced = context.scene.trees2_advanced_settings
-    if not advanced.replace_lod4_with_impostor:
-        return _ORIGINAL_LOD_EXECUTE(self, context)
-
     settings = context.scene.trees2_settings
     old_lod = settings.lod
     origin = context.scene.cursor.location.copy()
     spacing = settings.height * 0.72
     lod0_root = None
     lod0_branch = None
+
     try:
-        for i, lod in enumerate(("LOD0", "LOD1", "LOD2", "LOD3")):
+        # Generate stochastic growth only once. All lower LODs are strict,
+        # deterministic derivatives of this exact tree.
+        settings.lod = "LOD0"
+        master_branches, master_terminals = generator.generate_skeleton(settings)
+        master_records = stable_lods.generate_master_foliage(settings, master_terminals)
+
+        lods = ("LOD0", "LOD1", "LOD2", "LOD3")
+        if not advanced.replace_lod4_with_impostor:
+            lods = lods + ("LOD4",)
+
+        for i, lod in enumerate(lods):
             settings.lod = lod
-            root, branch, _foliage = generator.build_tree(
-                context, settings, location=origin + Vector((i * spacing, 0.0, 0.0))
+            branches, terminals = stable_lods.derive_lod_skeleton(master_branches, settings, lod)
+            records = stable_lods.derive_lod_foliage(master_records, settings, lod)
+            root, branch, _foliage = stable_lods.build_tree_from_data(
+                context,
+                settings,
+                branches,
+                terminals,
+                records,
+                location=origin + Vector((i * spacing, 0.0, 0.0)),
             )
+            branch["trees2_master_branch_count"] = len(master_branches)
+            branch["trees2_master_leaf_points"] = len(master_records)
             if lod == "LOD0":
                 lod0_root = root
                 lod0_branch = branch
+    except Exception as exc:
+        self.report({"ERROR"}, f"Stable LOD generation failed: {exc}")
+        return {"CANCELLED"}
     finally:
         settings.lod = old_lod
+
+    if not advanced.replace_lod4_with_impostor:
+        if lod0_branch:
+            context.view_layer.objects.active = lod0_branch
+        self.report({"INFO"}, "Generated stable nested LOD0-LOD4 from one master tree")
+        return {"FINISHED"}
 
     if not lod0_root:
         self.report({"ERROR"}, "Could not create LOD0 source for impostor")
@@ -84,13 +111,14 @@ def _advanced_lod_execute(self, context):
         )
         if billboard:
             billboard["trees2_lod_set_preview"] = True
+            billboard["trees2_lod_source"] = "LOD0_MASTER"
             bpy.ops.object.select_all(action="DESELECT")
             billboard.hide_set(False)
             billboard.select_set(True)
             context.view_layer.objects.active = billboard
         elif lod0_branch:
             context.view_layer.objects.active = lod0_branch
-        self.report({"INFO"}, f"Generated LOD0-LOD3 + multi-view impostor LOD4: {path}")
+        self.report({"INFO"}, f"Generated stable LOD0-LOD3 + multi-view impostor LOD4: {path}")
     except Exception as exc:
         self.report({"WARNING"}, f"LOD0-LOD3 generated, but impostor bake failed: {exc}")
     return {"FINISHED"}
