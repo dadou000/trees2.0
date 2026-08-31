@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 3, 1),
+    "version": (0, 3, 2),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with competition growth, exact branch junctions, instanced foliage, and impostor LODs",
+    "description": "Procedural game-ready trees with stable nested LODs, competition growth, exact branch junctions, instanced foliage, and impostor LODs",
     "category": "Add Mesh",
 }
 
