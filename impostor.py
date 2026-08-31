@@ -120,8 +120,10 @@ def _make_impostor_material(atlas_image, views):
 
     facing = nodes.new("ShaderNodeLayerWeight")
     cutoff = nodes.new("ShaderNodeMath")
-    cutoff.operation = "GREATER_THAN"
-    cutoff.inputs[1].default_value = math.cos(math.pi / max(views, 4)) * 0.985
+    # Blender 5.2 Layer Weight Facing is 0 when face-on and approaches 1
+    # toward grazing angles. Keep only cards inside roughly half a view step.
+    cutoff.operation = "LESS_THAN"
+    cutoff.inputs[1].default_value = 1.0 - math.cos((math.pi / max(views, 4)) * 1.04)
     alpha = nodes.new("ShaderNodeMath")
     alpha.operation = "MULTIPLY"
     links.new(facing.outputs["Facing"], cutoff.inputs[0])
@@ -218,12 +220,12 @@ def bake_impostor(context, root, advanced, billboard_offset=None):
         "color_mode": scene.render.image_settings.color_mode,
     }
     hide_states = {obj.name: obj.hide_render for obj in scene.objects}
-    tree_objects = set(root.all_objects)
+    tree_object_names = {obj.name for obj in root.all_objects}
     camera_obj = None
     lights = ()
     try:
         for obj in scene.objects:
-            if obj not in tree_objects:
+            if obj.name not in tree_object_names:
                 obj.hide_render = True
             elif obj.get("trees2_internal") or obj.get("trees2_impostor"):
                 obj.hide_render = True
@@ -271,6 +273,7 @@ def bake_impostor(context, root, advanced, billboard_offset=None):
         if existing:
             bpy.data.images.remove(existing)
         atlas_image = bpy.data.images.new(image_name, width=atlas_width, height=atlas_height, alpha=True)
+        atlas_image.alpha_mode = "STRAIGHT"
         try:
             atlas_image.pixels.foreach_set(pixels)
         except Exception:
