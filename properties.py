@@ -8,19 +8,14 @@ from bpy.props import (
     PointerProperty,
 )
 
+from .presets import PRESET_ITEMS
+
 
 class TREES2_PG_Settings(bpy.types.PropertyGroup):
     seed: IntProperty(name="Seed", default=1, min=0, max=2_147_483_647)
     species_preset: EnumProperty(
         name="Preset",
-        items=(
-            ("GENERIC", "Generic Broadleaf", "Balanced broadleaf starting point"),
-            ("OAK", "Oak", "Broad spreading crown, heavy limbs"),
-            ("BIRCH", "Birch", "Slender trunk, light crown"),
-            ("POPLAR", "Poplar", "Tall narrow columnar crown"),
-            ("WILLOW", "Willow", "Wide crown with strong droop"),
-            ("PINE", "Pine", "Conical evergreen silhouette using foliage cards"),
-        ),
+        items=PRESET_ITEMS,
         default="GENERIC",
     )
 
