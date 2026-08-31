@@ -36,26 +36,32 @@ class TREES2_PG_AdvancedSettings(bpy.types.PropertyGroup):
     junction_mode: EnumProperty(
         name="Junction Geometry",
         items=(
-            ("COLLAR", "Fast Collars", "Keep intersecting tubes with enlarged branch collars"),
-            ("VOXEL_FUSE", "Fused Manifold", "Voxel-fuse overlapping branch shells into one manifold mesh"),
+            ("COLLAR", "Fast Collars", "Keep intersecting branch tubes with enlarged collars"),
+            (
+                "EXACT_BOOLEAN",
+                "Exact Boolean Junctions",
+                "Union trunk and major branches with Blender's Exact Boolean solver without remeshing the whole tree",
+            ),
         ),
-        default="VOXEL_FUSE",
+        default="EXACT_BOOLEAN",
     )
-    junction_voxel_size: FloatProperty(
-        name="Voxel Size", default=0.055, min=0.005, max=0.5, unit="LENGTH",
-        description="Voxel size for fused branch junctions; smaller preserves finer twigs but creates more geometry",
+    junction_boolean_level_max: IntProperty(
+        name="Exact Through Branch Level",
+        default=2,
+        min=1,
+        max=4,
+        description="Highest branch hierarchy level fused with Exact Boolean; thinner branches remain cheap collar geometry",
     )
-    junction_adaptivity: FloatProperty(
-        name="Adaptivity", default=0.12, min=0.0, max=1.0,
-        description="Reduce fused mesh density in flatter areas",
-    )
-    junction_fuse_lod_max: IntProperty(
-        name="Fuse Through LOD", default=1, min=0, max=4,
-        description="Highest numeric LOD to receive manifold voxel fusion",
+    junction_boolean_lod_max: IntProperty(
+        name="Exact Through LOD",
+        default=1,
+        min=0,
+        max=4,
+        description="Highest numeric LOD that receives Exact Boolean junctions",
     )
     reproject_branch_attributes: BoolProperty(
         name="Reproject Attributes", default=True,
-        description="Reproject branch hierarchy and wind attributes after voxel fusion",
+        description="Reproject branch hierarchy and wind attributes after topology-changing Boolean unions",
     )
 
     impostor_views: IntProperty(
