@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 8, 2),
+    "version": (0, 8, 3),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with direct 16-bit PBR export, high-fidelity species leaf and bark synthesis, detailed pendulous willow foliage, fractured willow bark, smart foliage assembly, stable LODs, impostors, and GitHub updates",
+    "description": "Procedural game-ready trees with target-tuned weeping willow architecture, curtain bundles, direct 16-bit PBR export, high-fidelity species leaf and bark synthesis, stable LODs, impostors, and GitHub updates",
     "category": "Add Mesh",
 }
 
@@ -41,6 +41,7 @@ from . import (
     willow_bark_synthesis,
     willow_foliage_fix,
     willow_leaf_synthesis,
+    willow_tuning,
 )
 
 
@@ -76,6 +77,10 @@ def register():
     # Install after the general leaf runtime so willow inherits its corrected
     # compositing, then replaces only the willow blade renderer/normal response.
     willow_leaf_synthesis.install()
+    # Final willow defaults are target-driven. Install after willow leaf
+    # synthesis so palette/leaf-count tuning is the final species state used by
+    # Apply Species Preset and PBR generation.
+    willow_tuning.install()
     pbr_live_apply.install()
     ui.register()
     advanced_ui.register()
@@ -95,6 +100,7 @@ def unregister():
     advanced_ui.unregister()
     ui.unregister()
     pbr_live_apply.uninstall()
+    willow_tuning.uninstall()
     willow_leaf_synthesis.uninstall()
     leaf_synthesis_runtime.uninstall()
     leaf_synthesis.uninstall()
