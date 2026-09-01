@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 8, 3),
+    "version": (0, 8, 4),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with target-tuned weeping willow architecture, curtain bundles, direct 16-bit PBR export, high-fidelity species leaf and bark synthesis, stable LODs, impostors, and GitHub updates",
+    "description": "Procedural game-ready trees with broad rounded willow architecture, virtual drooping branchlets, volumetric curtain bundles, direct 16-bit PBR export, stable LODs, impostors, and GitHub updates",
     "category": "Add Mesh",
 }
 
@@ -38,6 +38,7 @@ from . import (
     properties,
     ui,
     update_checker,
+    willow_architecture,
     willow_bark_synthesis,
     willow_foliage_fix,
     willow_leaf_synthesis,
@@ -55,6 +56,12 @@ def register():
     appearance_state.install()
     advanced_growth.install()
     branch_profiles.install()
+
+    # Wrap the fully installed skeleton generator. Willow keeps the real woody
+    # skeleton but exposes selected non-terminal limbs as virtual foliage
+    # supports, creating dense pendulous branchlets without extra branch mesh.
+    willow_architecture.install()
+
     foliage_assembly.install()
     foliage_assembly_lods.install()
     foliage_atlas_assembly.install()
@@ -66,20 +73,17 @@ def register():
     procedural_pbr.register()
 
     # All generated texture files go through one direct PNG pipeline. Non-color
-    # maps are written as 16-bit RGBA before Blender loads them, avoiding the
-    # previous image-buffer/save timing problem that could produce blank files.
+    # maps are written as 16-bit RGBA before Blender loads them.
     pbr_pipeline.install()
 
     bark_synthesis.install()
     willow_bark_synthesis.install()
     leaf_synthesis.install()
     leaf_synthesis_runtime.install()
-    # Install after the general leaf runtime so willow inherits its corrected
-    # compositing, then replaces only the willow blade renderer/normal response.
     willow_leaf_synthesis.install()
-    # Final willow defaults are target-driven. Install after willow leaf
-    # synthesis so palette/leaf-count tuning is the final species state used by
-    # Apply Species Preset and PBR generation.
+
+    # Final willow defaults are target-driven. Install after the general leaf
+    # renderer so the structural and palette tuning is the final species state.
     willow_tuning.install()
     pbr_live_apply.install()
     ui.register()
@@ -116,6 +120,7 @@ def unregister():
     foliage_atlas_assembly.uninstall()
     foliage_assembly_lods.uninstall()
     foliage_assembly.uninstall()
+    willow_architecture.uninstall()
     branch_profiles.uninstall()
     advanced_growth.uninstall()
     appearance_state.uninstall()
