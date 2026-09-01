@@ -20,9 +20,12 @@ WILLOW_PRESET_TUNING = {
     # by secondary/virtual branchlets instead of a narrow Gaussian umbrella.
     "height": 12.6,
     "base_radius": 0.68,
+    # Structural motion works on the generated polyline.  Extra trunk samples
+    # let the slow serpentine base/leader curvature remain visibly smooth.
+    "trunk_segments": 28,
     "trunk_irregularity": 0.24,
     "trunk_taper": 1.16,
-    "root_flare": 0.55,
+    "root_flare": 0.68,
     "crown_shape": "ROUND",
     "branch_distribution": "RANDOM",
 
