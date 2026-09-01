@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import BoolProperty, FloatProperty, IntProperty, PointerProperty, StringProperty
+from bpy.props import BoolProperty, EnumProperty, FloatProperty, IntProperty, PointerProperty, StringProperty
 
 from . import properties
 
@@ -16,8 +16,18 @@ class TREES2_PG_PBRSettings(bpy.types.PropertyGroup):
         description="Total square resolution of the generated leaf atlas",
     )
     bark_resolution: IntProperty(
-        name="Bark Resolution", default=512, min=128, max=2048,
-        description="Square resolution of each tileable bark texture",
+        name="Bark Resolution", default=1024, min=128, max=4096,
+        description="Square resolution of each tileable bark texture; high resolutions can take a long time",
+    )
+    bark_quality: EnumProperty(
+        name="Bark Synthesis Quality",
+        items=(
+            ("HIGH", "High", "High-quality multi-scale bark synthesis with a moderate structural working resolution"),
+            ("ULTRA", "Ultra", "More structural detail, cellular breakup and noise octaves; recommended default"),
+            ("EXTREME", "Extreme", "Maximum structural working resolution and octave count; can be very slow and memory intensive"),
+        ),
+        default="ULTRA",
+        description="Quality of the high-fidelity species-aware trunk texture synthesizer",
     )
     atlas_grid: IntProperty(
         name="Leaf Atlas Grid", default=4, min=1, max=8,
@@ -30,7 +40,7 @@ class TREES2_PG_PBRSettings(bpy.types.PropertyGroup):
     )
     bark_detail: FloatProperty(
         name="Bark Detail", default=1.0, min=0.25, max=2.5,
-        description="Multiplier for bark fissures and fine breakup",
+        description="Multiplier for bark fissures, ridges, plates and fine breakup",
     )
     leaf_normal_strength: FloatProperty(name="Leaf Normal Strength", default=1.0, min=0.0, max=3.0)
     bark_normal_strength: FloatProperty(name="Bark Normal Strength", default=1.0, min=0.0, max=3.0)
