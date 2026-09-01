@@ -1,8 +1,8 @@
 schema_version = "1.0.0"
 id = "trees2"
-version = "0.8.0"
+version = "0.8.1"
 name = "Trees 2.0"
-tagline = "High-fidelity fractured bark and species foliage synthesis for game-ready trees"
+tagline = "Direct 16-bit PBR export with high-fidelity species bark and foliage synthesis"
 maintainer = "dadou000"
 type = "add-on"
 blender_version_min = "5.2.0"
@@ -11,4 +11,4 @@ tags = ["Modeling", "Geometry Nodes"]
 
 [permissions]
 network = "Check GitHub and download newer Trees 2.0 versions for one-click updates"
-files = "Write procedural PBR textures, baked impostor atlases, and temporary update packages to disk"
+files = "Write direct PNG procedural PBR textures, baked impostor atlases, and temporary update packages to disk"
