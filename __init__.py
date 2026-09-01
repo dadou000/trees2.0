@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 7, 0),
+    "version": (0, 7, 1),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with high-fidelity species leaf and bark synthesis, smart foliage assembly, stable LODs, impostors, and GitHub updates",
+    "description": "Procedural game-ready trees with high-fidelity species leaf and bark synthesis, dedicated riven willow bark, smart foliage assembly, stable LODs, impostors, and GitHub updates",
     "category": "Add Mesh",
 }
 
@@ -37,6 +37,7 @@ from . import (
     properties,
     ui,
     update_checker,
+    willow_bark_synthesis,
     willow_foliage_fix,
 )
 
@@ -61,6 +62,10 @@ def register():
     operators.register()
     procedural_pbr.register()
     bark_synthesis.install()
+    # Mature weeping-willow bark has a dedicated riven/fibrous solve.  Install
+    # after the general HQ bark generator so all non-willow species retain the
+    # normal bark path while WILLOW gets the specialized structural generator.
+    willow_bark_synthesis.install()
     leaf_synthesis.install()
     # Runtime integration assigns the generated translucency map, fixes atlas
     # surface compositing and exposes conservative thin-leaf scattering to the
@@ -87,6 +92,7 @@ def unregister():
     pbr_live_apply.uninstall()
     leaf_synthesis_runtime.uninstall()
     leaf_synthesis.uninstall()
+    willow_bark_synthesis.uninstall()
     bark_synthesis.uninstall()
     procedural_pbr.unregister()
     operators.unregister()
