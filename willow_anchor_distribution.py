@@ -67,8 +67,6 @@ def _crown_radius_reference(branches, settings):
     if not samples:
         return max(float(settings.branch_length), float(settings.base_radius) * 4.0, 1.0e-4)
     samples.sort()
-    # A high percentile is more robust than the absolute maximum if one branch
-    # happens to grow unusually far from the rest of the crown.
     index = min(len(samples) - 1, max(0, int(round((len(samples) - 1) * 0.90))))
     return max(samples[index], float(settings.base_radius) * 4.0, 1.0e-4)
 
@@ -91,11 +89,29 @@ def _anchor_metadata(branch, exposure):
         else:
             weight, length_scale, max_bundles = 0.40, 0.72, 2
 
-    # Inner virtual supports are intentionally weak; outer supports carry more
-    # of the short crown-fill sprays that connect into the long fringe.
     exposure_gain = 0.52 + 0.68 * _smoothstep(0.25, 0.88, exposure)
     length_gain = 0.80 + 0.24 * _smoothstep(0.38, 0.90, exposure)
     return weight * exposure_gain, length_scale * length_gain, max_bundles
+
+
+def _clear_predeformation_anchor_metadata(branches):
+    """Architecture v2 used to choose virtual anchors before structural motion.
+
+    Strip those provisional flags so this stage can re-score the final curved
+    skeleton. Real terminals are preserved by filtering them separately.
+    """
+    keys = (
+        "willow_aux_anchor",
+        "willow_anchor_weight",
+        "willow_length_scale",
+        "willow_fill_only",
+        "willow_max_bundles",
+        "willow_anchor_level",
+        "willow_radial_exposure",
+    )
+    for branch in branches:
+        for key in keys:
+            branch.pop(key, None)
 
 
 def _add_virtual_anchors(settings, branches, terminals):
@@ -125,8 +141,6 @@ def _add_virtual_anchors(settings, branches, terminals):
 
         exposure = _clamp(_branch_exposure_sample(branch) / crown_radius)
 
-        # The target has a dark but relatively open central core.  Level-1
-        # supports especially should almost never grow curtains near the trunk.
         if level == 1 and exposure < 0.25:
             continue
         if level >= 2 and exposure < 0.16:
@@ -158,7 +172,7 @@ def _add_virtual_anchors(settings, branches, terminals):
     terminals.extend(extras)
     try:
         trunk = branches[0]
-        trunk["willow_anchor_distribution_version"] = 1
+        trunk["willow_anchor_distribution_version"] = 2
         trunk["willow_final_crown_radius"] = float(crown_radius)
         trunk["willow_virtual_anchor_count"] = len(extras)
         trunk["willow_real_terminal_count"] = len(terminals) - len(extras)
@@ -171,7 +185,11 @@ def _generate_with_final_anchors(settings):
     branches, terminals = _PREVIOUS_GENERATE(settings)
     if str(getattr(settings, "species_preset", "")) != "WILLOW" or not branches:
         return branches, terminals
-    terminals = list(terminals)
+
+    # Keep true terminals from the architecture/growth stages, but discard the
+    # older provisional virtual anchors selected before structural deformation.
+    terminals = [branch for branch in terminals if not branch.get("willow_aux_anchor", False)]
+    _clear_predeformation_anchor_metadata(branches)
     _add_virtual_anchors(settings, branches, terminals)
     return branches, terminals
 
