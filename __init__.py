@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 8, 8),
+    "version": (0, 9, 0),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with low multi-leader willow forks, hierarchy-aware structural motion, radial curtain canopies, direct PBR export, stable LODs, impostors, and GitHub updates",
+    "description": "Procedural game-ready trees with research-based sympodial willow relay growth, hierarchy-aware structural motion, dense curtain canopies, direct PBR export, stable LODs, impostors, and GitHub updates",
     "category": "Add Mesh",
 }
 
@@ -41,11 +41,10 @@ from . import (
     willow_anchor_distribution,
     willow_architecture,
     willow_bark_synthesis,
-    willow_canopy_tuning,
     willow_crown_spread,
     willow_foliage_fix,
-    willow_fork_dominance,
     willow_leaf_synthesis,
+    willow_relay_architecture,
     willow_structure_motion,
     willow_tuning,
 )
@@ -62,21 +61,21 @@ def register():
     advanced_growth.install()
     branch_profiles.install()
 
-    # 1) Add sparse real mature-willow topology before deformation.
+    # Willow 0.9: research-based sympodial architecture.  Suppress the older
+    # artificial equal co-dominant leaders, retain roots/scaffold augmentation,
+    # then physically terminate the basal trunk and continue height through
+    # successive vigorous relay axes.
+    willow_relay_architecture.prepare()
     willow_architecture.install()
+    willow_relay_architecture.install()
 
-    # 2) Break the remaining single-pole silhouette: add extra heavy leaders in
-    # empty sectors and subordinate the original upper trunk above the fork zone.
-    willow_fork_dominance.install()
-
-    # 3) Bend the complete hierarchy while preserving child attachment frames.
+    # Bend the complete relay hierarchy while preserving child attachment frames.
     willow_structure_motion.install()
 
-    # 4) Expand complete primary subtrees horizontally. Descendants receive the
-    # same transform as their parent, so the broader dome keeps junctions.
+    # Give the resulting scaffold/relay subtrees a modest broad-crown correction.
     willow_crown_spread.install()
 
-    # 5) Re-score virtual foliage supports on the final curved/spread skeleton.
+    # Re-score cheap virtual foliage supports on the final curved/spread skeleton.
     willow_anchor_distribution.install()
 
     foliage_assembly.install()
@@ -84,9 +83,9 @@ def register():
     foliage_atlas_assembly.install()
     willow_foliage_fix.install()
 
-    # 6) Shape whole willow curtains radially/vertically after continuous card
-    # placement rather than deleting individual cards.
-    willow_canopy_tuning.install()
+    # The former radial strand-deletion pass is intentionally inactive.  Mature
+    # Salix babylonica has a dense rounded crown; inner volume is created with
+    # shorter curtains rather than deleting whole curtain groups.
 
     foliage_sizing.install()
     exact_junctions.install()
@@ -104,7 +103,6 @@ def register():
     leaf_synthesis_runtime.install()
     willow_leaf_synthesis.install()
 
-    # Final willow defaults are target-driven and include the darker palette.
     willow_tuning.install()
     pbr_live_apply.install()
     ui.register()
@@ -137,7 +135,6 @@ def unregister():
     advanced_operators.unregister()
     exact_junctions.uninstall()
     foliage_sizing.uninstall()
-    willow_canopy_tuning.uninstall()
     willow_foliage_fix.uninstall()
     foliage_atlas_assembly.uninstall()
     foliage_assembly_lods.uninstall()
@@ -145,8 +142,9 @@ def unregister():
     willow_anchor_distribution.uninstall()
     willow_crown_spread.uninstall()
     willow_structure_motion.uninstall()
-    willow_fork_dominance.uninstall()
+    willow_relay_architecture.uninstall()
     willow_architecture.uninstall()
+    willow_relay_architecture.restore_preparation()
     branch_profiles.uninstall()
     advanced_growth.uninstall()
     appearance_state.uninstall()
