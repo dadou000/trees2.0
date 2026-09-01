@@ -1,59 +1,247 @@
-"""Continuous, density-aware weeping-willow foliage assembly.
+"""Targeted weeping-willow foliage tuning.
 
-This patch refines the v0.5 smart foliage system without changing its efficient
-Geometry Nodes instancing architecture. Willow foliage is assembled as dense
-pendulous curtains: card spacing is derived from actual source-card coverage,
-successive sprig cards overlap by construction, and LOD thinning preserves an
-evenly sampled 1D strand rather than punching random holes into it.
+The generic smart-foliage system remains responsible for instancing and export.
+This module only replaces willow curtain placement and willow LOD selection.
+
+The v3 model is deliberately canopy-aware:
+* dense short/medium curtains fill the upper and middle crown,
+* nearby strands are emitted as small curtain bundles instead of isolated hairs,
+* long ground-reaching strands are sparse outer accents rather than the norm,
+* low attachment points are strongly suppressed so density does not pile up
+  around the lower trunk,
+* willow card scale is nearly constant, matching the species' fairly consistent
+  leaf size,
+* the corrected atlas sprig from foliage_atlas_assembly remains authoritative.
 """
 
 import math
 
 from mathutils import Vector
 
-from . import foliage_assembly, foliage_assembly_lods, foliage_atlas_assembly, generator
+from . import foliage_assembly, foliage_assembly_lods, generator
 
 
 _PREVIOUS_GENERATE_WEEPING = None
 _PREVIOUS_DERIVE_WEEPING = None
-_PREVIOUS_WEEPING_SPRIG = None
 _PREVIOUS_PROFILE = None
 _INSTALLED = False
 
 
-_PROFILE_V2 = {
-    "density": 0.92,
-    "spacing": 0.52,
-    "position_spread": 0.12,
+_PROFILE_V3 = {
+    "density": 1.08,
+    "spacing": 0.40,
+    "position_spread": 0.20,
     "twig": 0.20,
     "up": 0.0,
     "gravity": 1.0,
-    "outward": 0.70,
-    "jitter": math.radians(11.0),
-    "width": 0.70,
-    "height": 1.05,
-    "source_aspect": 1.75,
+    "outward": 0.74,
+    "jitter": math.radians(9.0),
+    "width": 0.62,
+    "height": 0.94,
+    "source_aspect": 1.55,
     "role": 2,
-    "strand_length_ratio": 0.30,
-    "strand_count_per_meter": 0.95,
-    "cards_per_meter": 3.20,
-    "flutter": 0.030,
-    "overlap": 0.62,
-    "side_offset": 0.055,
-    "max_strands_per_terminal": 8,
+    "strand_length_ratio": 0.235,
+    "strand_count_per_meter": 1.30,
+    "cards_per_meter": 3.8,
+    "flutter": 0.038,
+    "overlap": 0.68,
+    "side_offset": 0.035,
+    "max_bundles_per_terminal": 5,
+    "max_bundle_size": 4,
 }
 
 
+def _clamp(value, lo=0.0, hi=1.0):
+    return max(lo, min(hi, value))
+
+
+def _smoothstep(lo, hi, value):
+    if hi <= lo:
+        return 1.0 if value >= hi else 0.0
+    t = _clamp((value - lo) / (hi - lo))
+    return t * t * (3.0 - 2.0 * t)
+
+
 def _reference_card_length(settings, cfg, profile):
-    """Approximate the world-space long-axis coverage of one source card."""
     base = float(settings.card_scale) * float(cfg["card_scale"])
     return max(
-        float(settings.card_scale) * 0.45,
+        float(settings.card_scale) * 0.42,
         base * float(profile["height"]) * float(profile["source_aspect"]),
     )
 
 
-def _generate_weeping_v2(settings, terminals, cfg, profile, assembly):
+def _height_density_weight(height_fraction):
+    """Favor upper/mid crown attachments and strongly suppress the lower core."""
+    h = _clamp(height_fraction)
+    lower_gate = 0.16 + 0.84 * _smoothstep(0.27, 0.50, h)
+    upper_fill = 0.72 + 0.62 * _smoothstep(0.43, 0.76, h)
+    # Avoid an artificial cap of equal-length strands at the absolute tree top.
+    top_softening = 1.0 - 0.18 * _smoothstep(0.90, 1.01, h)
+    return lower_gate * upper_fill * top_softening
+
+
+def _length_ratio_for_height(rng, height_fraction, exposure):
+    """Mix short crown fill with medium drapes and sparse long outer accents."""
+    h = _clamp(height_fraction)
+    if h >= 0.75:
+        ratio = rng.uniform(0.16, 0.235)
+    elif h >= 0.50:
+        ratio = rng.uniform(0.195, 0.285)
+    else:
+        ratio = rng.uniform(0.215, 0.305)
+
+    ratio *= 0.92 + 0.17 * _clamp(exposure)
+    accent_probability = 0.10 + 0.18 * _clamp(exposure)
+    accent = rng.random() < accent_probability
+    if accent:
+        ratio *= rng.uniform(1.22, 1.42)
+    return ratio, accent
+
+
+def _willow_scale(settings, cfg, profile, rng):
+    """Willow leaves stay nearly constant in scale; volume comes from placement."""
+    base = float(settings.card_scale) * float(cfg["card_scale"])
+    jitter = rng.uniform(0.965, 1.035)
+    value = base * jitter
+    return Vector((
+        value * float(profile["width"]),
+        value * float(profile["width"]),
+        value * float(profile["height"]),
+    ))
+
+
+def _emit_strand(
+    records,
+    settings,
+    cfg,
+    profile,
+    assembly,
+    branch,
+    rng,
+    anchor,
+    tangent,
+    outward,
+    side,
+    horizontal,
+    exposure,
+    ground_z,
+    target_step,
+    reference_length,
+    atlas_count,
+    source_index,
+    strand_global_id,
+    local_strand_index,
+):
+    fa = foliage_assembly
+    h = _clamp(anchor.z / max(float(settings.height), 1.0e-5))
+    ratio, accent = _length_ratio_for_height(rng, h, exposure)
+    desired = (
+        float(settings.height)
+        * ratio
+        * float(assembly.willow_length)
+        * rng.uniform(0.94, 1.06)
+    )
+
+    available = max(0.25, anchor.z - ground_z)
+    if accent:
+        # A minority of exposed outer strands can form the characteristic long
+        # willow fringe and approach the ground.
+        reach_fraction = 0.72 + 0.27 * float(assembly.willow_ground_reach)
+    else:
+        # Most curtains stop well above the ground, building crown volume rather
+        # than creating the uniform floor-length "hair" silhouette.
+        reach_fraction = 0.54 + 0.31 * float(assembly.willow_ground_reach)
+    reach_cap = available * reach_fraction
+    strand_length = max(reference_length * 1.08, min(desired, reach_cap))
+
+    required_count = max(3, int(math.ceil(strand_length / target_step)) + 1)
+    max_cards = max(3, int(assembly.willow_max_cards))
+    card_count = min(max_cards, required_count)
+    if card_count < required_count:
+        # Preserve overlap. A hard card budget shortens a strand rather than
+        # stretching its cards apart.
+        strand_length = min(strand_length, target_step * (card_count - 1))
+
+    phase = rng.uniform(0.0, math.tau)
+    flutter = float(profile["flutter"]) * float(assembly.willow_flutter)
+
+    for card_i in range(card_count):
+        t = card_i / max(card_count - 1, 1)
+        p = fa._strand_position(
+            anchor,
+            horizontal,
+            side,
+            strand_length,
+            flutter,
+            phase,
+            t,
+        )
+
+        distance_step = min(target_step * 0.35, strand_length * 0.075)
+        t2 = fa._clamp(
+            (t * strand_length + distance_step) / max(strand_length, 1.0e-5)
+        )
+        p2 = fa._strand_position(
+            anchor,
+            horizontal,
+            side,
+            strand_length,
+            flutter,
+            phase,
+            t2,
+        )
+        local_dir = fa._safe_normalized(p2 - p, fa._WORLD_DOWN)
+
+        # A tiny alternating side shift stops perfectly coincident cards without
+        # turning the strand into a zig-zag chain.
+        alternate = -1.0 if card_i % 2 else 1.0
+        p += (
+            side
+            * alternate
+            * float(settings.card_scale)
+            * float(profile["side_offset"])
+        )
+
+        long_axis = fa._safe_normalized(
+            local_dir * (0.92 * float(assembly.twig_alignment))
+            + fa._WORLD_DOWN * (0.58 * float(assembly.gravity_response)),
+            fa._WORLD_DOWN,
+        )
+        normal = outward + side * alternate * 0.12
+        fan = (
+            rng.uniform(-1.0, 1.0)
+            * float(profile["jitter"])
+            * float(assembly.angular_jitter)
+        )
+        rotation = fa._card_rotation(long_axis, normal, fan)
+
+        scale = _willow_scale(settings, cfg, profile, rng)
+        # Only 2% distal change: real willow blades do not become dramatically
+        # smaller toward the bottom of a hanging shoot.
+        scale *= 1.0 - 0.02 * t
+
+        record = fa._record(
+            settings,
+            branch,
+            p,
+            rotation,
+            scale,
+            rng.randrange(atlas_count),
+            source_index,
+            local_strand_index * 1000 + card_i,
+            profile["role"],
+            strand_t=t,
+            strand_id=strand_global_id,
+        )
+        record["willow_accent_strand"] = bool(accent)
+        record["willow_anchor_height"] = float(h)
+        records.append(record)
+        source_index += 1
+
+    return source_index
+
+
+def _generate_weeping_v3(settings, terminals, cfg, profile, assembly):
     fa = foliage_assembly
     atlas_count = max(
         1,
@@ -66,27 +254,25 @@ def _generate_weeping_v2(settings, terminals, cfg, profile, assembly):
     source_index = 0
     strand_global_id = 0
 
-    # Willow needs many nearby curtain anchors. Keep a spatial hash, but use it
-    # to prevent exact duplicates rather than imposing broadleaf-like spacing.
+    # Separate bundle centres enough to fill canopy volume while allowing the
+    # individual strands inside one bundle to overlap visually.
     anchor_spacing = max(
-        0.035,
-        float(settings.card_scale)
-        * float(profile["spacing"])
-        * float(assembly.spacing),
+        0.060,
+        float(settings.card_scale) * 0.22 * float(assembly.spacing),
     )
     anchor_grid = fa._AnchorGrid(anchor_spacing)
     lod_density = max(0.05, float(cfg["foliage"]))
     ground_z = max(0.03, float(settings.base_radius) * 0.18)
 
     overlap = fa._clamp(
-        float(getattr(assembly, "willow_overlap", profile.get("overlap", 0.62))),
-        0.20,
+        float(getattr(assembly, "willow_overlap", profile["overlap"])),
+        0.30,
         0.88,
     )
     spacing_multiplier = max(0.55, float(assembly.willow_spacing))
     reference_length = _reference_card_length(settings, cfg, profile)
     target_step = max(
-        float(settings.card_scale) * 0.14,
+        float(settings.card_scale) * 0.12,
         reference_length * (1.0 - overlap) * spacing_multiplier,
     )
 
@@ -95,227 +281,142 @@ def _generate_weeping_v2(settings, terminals, cfg, profile, assembly):
             continue
 
         branch_id = int(branch.get("id", 0))
-        rng = fa._stable_rng(settings.seed, branch_id, 173)
+        rng = fa._stable_rng(settings.seed, branch_id, 373)
         branch_length = generator._polyline_length(branch)
 
-        raw_count = (
+        # Think in bundles, not independent strings. The total number of strands
+        # remains comparable to the old generator, but they form volumetric
+        # curtain sheets in the crown instead of a uniformly spaced hair comb.
+        raw_strands = (
             branch_length
             * float(profile["strand_count_per_meter"])
             * float(settings.foliage_density)
             * float(profile["density"])
             * float(assembly.density_budget)
-            * (lod_density ** 0.42)
+            * (lod_density ** 0.40)
         )
-        strand_count = max(1, round(raw_count))
-        # A substantial terminal shoot should not be represented by one lonely
-        # curtain. This is still cheap because the leaves remain GN instances.
-        if branch_length >= max(0.65, float(settings.card_scale) * 2.8):
-            strand_count = max(2, strand_count)
-        strand_count = min(int(profile.get("max_strands_per_terminal", 8)), strand_count)
+        bundle_count = max(1, round(raw_strands / 2.6))
+        bundle_count = min(int(profile["max_bundles_per_terminal"]), bundle_count)
 
-        accepted_strands = 0
-        attempts = max(strand_count * 5, 6)
+        accepted_bundles = 0
+        attempts = max(8, bundle_count * 7)
         for _attempt in range(attempts):
-            if accepted_strands >= strand_count:
+            if accepted_bundles >= bundle_count:
                 break
 
-            # Spread curtains across the distal 2/3 of the terminal shoot. A
-            # mild tip bias preserves the hanging outer silhouette without
-            # stacking every strand at the exact terminal point.
+            # Sample most of the terminal shoot rather than only its last few
+            # percent. This fills the crown interior and hides radial scaffolds.
             r = rng.random()
-            f = 0.32 + 0.66 * (1.0 - (1.0 - r) ** 1.65)
+            f = 0.20 + 0.78 * (1.0 - (1.0 - r) ** 1.28)
             anchor, _radius, tangent = generator._point_on_polyline(branch, f)
             u, _v = generator._basis(tangent)
-            anchor += u * rng.uniform(-0.11, 0.11) * float(settings.card_scale)
-            if not anchor_grid.accept(anchor, anchor_spacing):
-                continue
-
-            strand_index = accepted_strands
-            horizontal = Vector((tangent.x, tangent.y, 0.0))
-            horizontal = fa._safe_normalized(horizontal, fa._outward_vector(anchor, tangent))
             outward = fa._outward_vector(anchor, tangent)
+            horizontal = Vector((tangent.x, tangent.y, 0.0))
+            horizontal = fa._safe_normalized(horizontal, outward)
             side = fa._WORLD_UP.cross(horizontal)
             side = fa._safe_normalized(side, u)
 
+            h = _clamp(anchor.z / max(float(settings.height), 1.0e-5))
             radial = math.hypot(anchor.x, anchor.y)
             radial_reference = max(
-                float(settings.branch_length),
+                float(settings.branch_length) * 1.08,
                 float(settings.base_radius) * 4.0,
-                1e-4,
+                1.0e-4,
             )
-            exposure = fa._clamp(radial / radial_reference)
-            desired = (
-                float(settings.height)
-                * float(profile["strand_length_ratio"])
-                * float(assembly.willow_length)
-                * (0.74 + 0.46 * exposure)
-                * rng.uniform(0.82, 1.15)
-            )
-            available = max(0.25, anchor.z - ground_z)
-            reach_cap = available * (
-                0.55 + 0.45 * float(assembly.willow_ground_reach)
-            )
-            strand_length = max(
-                reference_length * 1.35,
-                min(desired, reach_cap),
-            )
+            exposure = _clamp(radial / radial_reference)
+            density_weight = _height_density_weight(h) * (0.84 + 0.28 * exposure)
+            if rng.random() > _clamp(density_weight, 0.10, 1.0):
+                continue
 
-            # Coverage-based card count. Because count is ceil(length/step)+1,
-            # the actual spacing can only be equal to or smaller than the
-            # requested step, guaranteeing at least the requested overlap.
-            required_count = max(3, int(math.ceil(strand_length / target_step)) + 1)
-            max_cards = max(3, int(assembly.willow_max_cards))
-            card_count = min(max_cards, required_count)
+            # Small random offset prevents different terminal branches from
+            # landing their bundle centres at mathematically identical points.
+            anchor += side * rng.uniform(-0.10, 0.10) * float(settings.card_scale)
+            anchor += outward * rng.uniform(-0.045, 0.080) * float(settings.card_scale)
+            if not anchor_grid.accept(anchor, anchor_spacing):
+                continue
 
-            # If a user sets a very low hard cap, keep the strand continuous by
-            # shortening it rather than stretching large gaps between cards.
-            if card_count < required_count:
-                strand_length = min(strand_length, target_step * (card_count - 1))
+            bundle_size = 2
+            if h >= 0.48:
+                bundle_size += 1
+            if h >= 0.68 and rng.random() < 0.68:
+                bundle_size += 1
+            if exposure < 0.30 and rng.random() < 0.45:
+                bundle_size -= 1
+            bundle_size = max(1, min(int(profile["max_bundle_size"]), bundle_size))
 
-            phase = rng.uniform(0.0, math.tau)
-            flutter = float(profile["flutter"]) * float(assembly.willow_flutter)
+            bundle_spacing = float(settings.card_scale) * rng.uniform(0.14, 0.24)
+            bundle_center = (bundle_size - 1) * 0.5
+            for member in range(bundle_size):
+                offset_index = member - bundle_center
+                member_anchor = anchor.copy()
+                member_anchor += side * offset_index * bundle_spacing
+                member_anchor += outward * rng.uniform(-0.10, 0.13) * float(settings.card_scale)
+                member_anchor += horizontal * rng.uniform(-0.05, 0.08) * float(settings.card_scale)
+                member_anchor.z += rng.uniform(-0.035, 0.045) * float(settings.card_scale)
 
-            for card_i in range(card_count):
-                t = card_i / max(card_count - 1, 1)
-                p = fa._strand_position(
-                    anchor,
-                    horizontal,
+                # Each member gets a slightly different hanging plane, creating
+                # depth and dark interior overlap without coincident geometry.
+                member_side = fa._safe_normalized(
+                    side + outward * rng.uniform(-0.13, 0.13),
                     side,
-                    strand_length,
-                    flutter,
-                    phase,
-                    t,
                 )
-
-                # Evaluate the strand derivative in world-distance terms so the
-                # card long axis follows the hanging curve smoothly.
-                distance_step = min(target_step * 0.35, strand_length * 0.08)
-                t2 = fa._clamp(
-                    (t * strand_length + distance_step)
-                    / max(strand_length, 1e-5)
+                member_outward = fa._safe_normalized(
+                    outward + side * rng.uniform(-0.12, 0.12),
+                    outward,
                 )
-                p2 = fa._strand_position(
-                    anchor,
+                member_horizontal = fa._safe_normalized(
+                    horizontal + member_side * rng.uniform(-0.08, 0.08),
                     horizontal,
-                    side,
-                    strand_length,
-                    flutter,
-                    phase,
-                    t2,
-                )
-                local_dir = fa._safe_normalized(p2 - p, fa._WORLD_DOWN)
-
-                # Alternate leaves around the hanging shoot, but keep the offset
-                # small enough that neighboring sprig cards still visually join.
-                alternate = -1.0 if card_i % 2 else 1.0
-                p += (
-                    side
-                    * alternate
-                    * float(settings.card_scale)
-                    * float(profile.get("side_offset", 0.055))
-                    * (1.0 - 0.18 * t)
                 )
 
-                long_axis = fa._safe_normalized(
-                    local_dir * (0.90 * float(assembly.twig_alignment))
-                    + fa._WORLD_DOWN * (0.62 * float(assembly.gravity_response)),
-                    fa._WORLD_DOWN,
-                )
-                normal = outward + side * alternate * 0.16
-                fan = (
-                    rng.uniform(-1.0, 1.0)
-                    * float(profile["jitter"])
-                    * float(assembly.angular_jitter)
-                )
-                rotation = fa._card_rotation(long_axis, normal, fan)
-
-                scale = fa._base_scale(settings, cfg, rng, profile)
-                # Only a mild distal taper: v0.5 tapered too strongly, making
-                # the bottom of a curtain visibly disconnect.
-                taper = 1.0 - 0.11 * t
-                scale *= taper
-                scale.y *= 0.92
-                scale.z *= 1.03
-
-                source_local = strand_index * 1000 + card_i
-                records.append(fa._record(
+                source_index = _emit_strand(
+                    records,
                     settings,
+                    cfg,
+                    profile,
+                    assembly,
                     branch,
-                    p,
-                    rotation,
-                    scale,
-                    rng.randrange(atlas_count),
+                    rng,
+                    member_anchor,
+                    tangent,
+                    member_outward,
+                    member_side,
+                    member_horizontal,
+                    exposure,
+                    ground_z,
+                    target_step,
+                    reference_length,
+                    atlas_count,
                     source_index,
-                    source_local,
-                    profile["role"],
-                    strand_t=t,
-                    strand_id=strand_global_id,
-                ))
-                source_index += 1
+                    strand_global_id,
+                    member,
+                )
+                strand_global_id += 1
 
-            accepted_strands += 1
-            strand_global_id += 1
+            accepted_bundles += 1
 
     return records
 
 
-def _weeping_sprig_v2(profile, rng):
-    """Create a denser continuous willow sprig in each generated atlas cell."""
-    from . import procedural_pbr
-
-    count = max(7, int(profile.get("leaf_count", 8)))
-    aspect = max(float(profile.get("leaf_aspect", 4.45)), 1.0)
-    leaves = []
-    stem_base_y = -0.72
-
-    for i in range(count):
-        t = i / max(1, count - 1)
-        y = -0.58 + 1.16 * t
-        side = -1.0 if i % 2 else 1.0
-        angle = side * rng.uniform(0.34, 0.58) + rng.uniform(-0.045, 0.045)
-        sy = rng.uniform(0.18, 0.245)
-        sx = sy / aspect
-        cx = side * rng.uniform(0.050, 0.105)
-
-        # All petioles share the same lower stem origin. The atlas rasterizer
-        # draws twig segments from stem origin to leaf base, so these overlapping
-        # segments produce a continuous central hanging shoot rather than a set
-        # of disconnected leaf islands.
-        leaves.append(procedural_pbr._leaf_record(
-            cx,
-            y,
-            angle,
-            sx,
-            sy,
-            profile["leaf_shape"],
-            rng.uniform(-0.09, 0.09),
-            0.0,
-            stem_base_y,
-        ))
-
-    return leaves
-
-
 def _strand_priority(cards):
-    """Return a nested farthest-point order along one 1D strand."""
-    ordered = sorted(cards, key=lambda r: float(r.get("strand_t", 0.0)))
+    """Nested farthest-point order along a 1D strand for stable LOD thinning."""
+    ordered = sorted(cards, key=lambda record: float(record.get("strand_t", 0.0)))
     if len(ordered) <= 2:
         return ordered
 
     selected = [0, len(ordered) - 1]
     priority = [ordered[0], ordered[-1]]
     remaining = set(range(1, len(ordered) - 1))
-
     while remaining:
         best_index = None
         best_distance = -1.0
         for index in remaining:
             t = float(ordered[index].get("strand_t", 0.0))
             distance = min(
-                abs(t - float(ordered[s].get("strand_t", 0.0)))
-                for s in selected
+                abs(t - float(ordered[selected_index].get("strand_t", 0.0)))
+                for selected_index in selected
             )
-            if distance > best_distance + 1e-9:
+            if distance > best_distance + 1.0e-9:
                 best_distance = distance
                 best_index = index
         selected.append(best_index)
@@ -324,18 +425,18 @@ def _strand_priority(cards):
     return priority
 
 
-def _derive_weeping_v2(master_records, settings, lod):
+def _derive_weeping_v3(master_records, settings, lod):
     fal = foliage_assembly_lods
     cfg = generator.LOD[lod]
     factor = float(cfg["foliage"])
     if factor >= 0.999:
         return [fal._copy_record(record, 1.0) for record in master_records]
 
-    # Keep more samples along surviving strands than v0.5.0. The expensive
-    # dimension is strand/card count, not per-card geometry, because sources are
-    # shared GN instances.
-    strand_fraction = max(0.22, factor ** 0.44)
-    card_fraction = max(0.34, factor ** 0.34)
+    # Preserve willow volume more aggressively than generic foliage. Removing
+    # entire curtain sheets too early is visually much more destructive than a
+    # few extra shared card instances.
+    strand_fraction = max(0.26, factor ** 0.36)
+    card_fraction = max(0.38, factor ** 0.30)
 
     by_branch = {}
     loose = []
@@ -349,7 +450,7 @@ def _derive_weeping_v2(master_records, settings, lod):
 
     selected = []
     for branch_id, strands in by_branch.items():
-        ranked_strands = sorted(
+        ranked = sorted(
             strands.items(),
             key=lambda item: fal.stable_lods._stable_unit(
                 int(settings.seed) ^ (branch_id * 0x45D9F3B),
@@ -358,9 +459,9 @@ def _derive_weeping_v2(master_records, settings, lod):
         )
         keep_strands = max(
             1,
-            min(len(ranked_strands), round(len(ranked_strands) * strand_fraction)),
+            min(len(ranked), round(len(ranked) * strand_fraction)),
         )
-        for _strand_id, cards in ranked_strands[:keep_strands]:
+        for _strand_id, cards in ranked[:keep_strands]:
             priority = _strand_priority(cards)
             target_cards = max(
                 2,
@@ -371,28 +472,25 @@ def _derive_weeping_v2(master_records, settings, lod):
     if loose:
         selected.extend(fal._PREVIOUS_DERIVE(loose, settings, lod))
 
-    # Dense structured curtains need little size inflation. Excessive LOD card
-    # growth makes their individual rectangles obvious again.
-    coverage = factor ** -0.12 if factor > 0.0 else 1.0
-    scale_boost = min(1.45, max(float(cfg["card_scale"]), coverage))
+    # Avoid inflating willow cards into obvious rectangles at low LOD.
+    coverage = factor ** -0.10 if factor > 0.0 else 1.0
+    scale_boost = min(1.30, max(1.0, coverage))
     return [fal._copy_record(record, scale_boost) for record in selected]
 
 
 def install():
     global _PREVIOUS_GENERATE_WEEPING, _PREVIOUS_DERIVE_WEEPING
-    global _PREVIOUS_WEEPING_SPRIG, _PREVIOUS_PROFILE, _INSTALLED
+    global _PREVIOUS_PROFILE, _INSTALLED
     if _INSTALLED:
         return
 
     _PREVIOUS_GENERATE_WEEPING = foliage_assembly._generate_weeping_foliage
     _PREVIOUS_DERIVE_WEEPING = foliage_assembly_lods._derive_weeping
-    _PREVIOUS_WEEPING_SPRIG = foliage_atlas_assembly._weeping_sprig
     _PREVIOUS_PROFILE = dict(foliage_assembly.ASSEMBLY_PROFILES["WEEPING"])
 
-    foliage_assembly.ASSEMBLY_PROFILES["WEEPING"].update(_PROFILE_V2)
-    foliage_assembly._generate_weeping_foliage = _generate_weeping_v2
-    foliage_assembly_lods._derive_weeping = _derive_weeping_v2
-    foliage_atlas_assembly._weeping_sprig = _weeping_sprig_v2
+    foliage_assembly.ASSEMBLY_PROFILES["WEEPING"].update(_PROFILE_V3)
+    foliage_assembly._generate_weeping_foliage = _generate_weeping_v3
+    foliage_assembly_lods._derive_weeping = _derive_weeping_v3
     _INSTALLED = True
 
 
@@ -402,7 +500,6 @@ def uninstall():
         return
     foliage_assembly._generate_weeping_foliage = _PREVIOUS_GENERATE_WEEPING
     foliage_assembly_lods._derive_weeping = _PREVIOUS_DERIVE_WEEPING
-    foliage_atlas_assembly._weeping_sprig = _PREVIOUS_WEEPING_SPRIG
     foliage_assembly.ASSEMBLY_PROFILES["WEEPING"].clear()
     foliage_assembly.ASSEMBLY_PROFILES["WEEPING"].update(_PREVIOUS_PROFILE)
     _INSTALLED = False
