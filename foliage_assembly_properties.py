@@ -94,12 +94,26 @@ class TREES2_PG_FoliageAssembly(bpy.types.PropertyGroup):
         subtype="FACTOR",
         description="How strongly low outer willow strands are allowed to approach the ground",
     )
+    willow_overlap: FloatProperty(
+        name="Card Overlap",
+        default=0.62,
+        min=0.20,
+        max=0.88,
+        subtype="FACTOR",
+        description=(
+            "Target overlap between successive willow sprig cards. Higher values create "
+            "denser, more continuous hanging curtains"
+        ),
+    )
     willow_spacing: FloatProperty(
-        name="Strand Leaf Spacing",
+        name="Coverage Spacing",
         default=1.0,
-        min=0.5,
-        max=2.0,
-        description="Spacing multiplier between batched cards along hanging strands",
+        min=0.55,
+        max=1.75,
+        description=(
+            "Multiplier applied after overlap-derived willow card spacing. Values below 1 "
+            "increase continuity and values above 1 reduce card count"
+        ),
     )
     willow_flutter: FloatProperty(
         name="Strand Flutter",
@@ -110,10 +124,13 @@ class TREES2_PG_FoliageAssembly(bpy.types.PropertyGroup):
     )
     willow_max_cards: IntProperty(
         name="Max Cards / Strand",
-        default=7,
-        min=2,
-        max=12,
-        description="Hard budget cap per hanging strand",
+        default=18,
+        min=3,
+        max=32,
+        description=(
+            "Hard efficiency cap per hanging strand. Coverage-based spacing keeps the strand "
+            "continuous even when the cap is reached"
+        ),
     )
     write_debug_attributes: BoolProperty(
         name="Export Assembly Attributes",
