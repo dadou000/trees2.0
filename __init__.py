@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 8, 5),
+    "version": (0, 8, 6),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with hierarchy-aware chaotic willow structure, broad rounded canopies, virtual drooping branchlets, volumetric curtain bundles, direct 16-bit PBR export, stable LODs, impostors, and GitHub updates",
+    "description": "Procedural game-ready trees with forked mature willow topology, hierarchy-aware structural motion, volumetric curtain foliage, direct 16-bit PBR export, stable LODs, impostors, and GitHub updates",
     "category": "Add Mesh",
 }
 
@@ -58,14 +58,16 @@ def register():
     advanced_growth.install()
     branch_profiles.install()
 
-    # Deform the final botanical skeleton first.  The wrapper is hierarchy-aware:
-    # child attachments are remapped onto already-curved parents before their
-    # own level-dependent wander and distal droop are integrated.
-    willow_structure_motion.install()
-
-    # Virtual willow foliage supports are selected after structural deformation,
-    # so their height/exposure scoring reflects the actual curved scaffold.
+    # First expand the generic willow skeleton with a deliberately small amount
+    # of real medium-scale topology: low co-dominant leaders, structural forks,
+    # scaffold laterals and buttress roots.  The layer also marks selected woody
+    # limbs as virtual foliage supports.
     willow_architecture.install()
+
+    # Then deform the complete hierarchy.  Child attachments are remapped onto
+    # already-curved parents, so both original and architecture-added branches
+    # inherit coherent motion without opening their junctions.
+    willow_structure_motion.install()
 
     foliage_assembly.install()
     foliage_assembly_lods.install()
@@ -125,8 +127,8 @@ def unregister():
     foliage_atlas_assembly.uninstall()
     foliage_assembly_lods.uninstall()
     foliage_assembly.uninstall()
-    willow_architecture.uninstall()
     willow_structure_motion.uninstall()
+    willow_architecture.uninstall()
     branch_profiles.uninstall()
     advanced_growth.uninstall()
     appearance_state.uninstall()
