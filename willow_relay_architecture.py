@@ -1,27 +1,19 @@
 """Research-driven sympodial relay architecture for mature weeping willow.
 
-Willows do not maintain a conventional monopodial terminal leader indefinitely.
-Salix architecture is sympodial: vigorous distal/upper shoots can take over the
-main axis while lateral shoots become progressively pendulous.  This module
-models that behavior for WILLOW instead of forcing several equal low trunks.
+Salix architecture is sympodial rather than a permanent straight terminal pole:
+a vigorous distal shoot can take over height while lateral shoots become strongly
+pendulous. This module keeps a short basal trunk, terminates that original axis,
+and continues the crown through successive obliquely upright relay shoots.
 
-Pipeline intent:
-* keep a short, stout basal trunk and buttress roots,
-* terminate the generic trunk shortly beyond a first relay point,
-* continue height through one obliquely upright relay axis,
-* optionally continue again through a distal second relay,
-* grow real structural laterals from the relay axes,
-* let the existing willow motion/foliage systems make those laterals pendulous.
-
-The relay axes are deliberately level-1 branch records even when a relay is the
-child of another relay.  That keeps their heavy-axis structural-motion profile,
-while parent_id preserves the true hierarchy and exact junction relationship.
+Unlike the earlier forced multi-leader experiment, existing generic crown
+subtrees are not discarded. Whole subtrees that originally attached above the
+new trunk termination are rigidly transferred onto the relay axes, preserving
+branch count, local topology and foliage density while changing the supporting
+architecture.
 """
 
 import math
 import random
-
-from mathutils import Vector
 
 from . import generator, willow_architecture
 
@@ -30,8 +22,6 @@ _PREVIOUS_GENERATE = None
 _INSTALLED = False
 _PREPARED = False
 _OLD_ARCHITECTURE = {}
-
-_WORLD_UP = Vector((0.0, 0.0, 1.0))
 
 
 _RELAY_LOD = {
@@ -88,7 +78,7 @@ def _closest_factor(branch, target):
 
 
 def _truncate_branch(branch, factor, minimum_tip_radius):
-    """Trim a polyline at an exact arc-length factor and taper its short dead stub."""
+    """Trim at an exact arc-length factor and fair the aborted parent-shoot stub."""
     points = branch.get("points", ())
     if len(points) < 2:
         return
@@ -120,15 +110,12 @@ def _truncate_branch(branch, factor, minimum_tip_radius):
     if len(output) < 2:
         output = [(p.copy(), float(r)) for p, r in points[:2]]
 
-    # The parent shoot biologically aborts rather than turning into a blunt pole.
-    # Fair the last ~18% of the retained piece down into a subordinate terminal stub.
-    start_index = max(1, int(round((len(output) - 1) * 0.82)))
+    start_index = max(1, int(round((len(output) - 1) * 0.80)))
     start_radius = float(output[start_index][1])
-    count = max(1, len(output) - 1 - start_index)
+    denominator = max(1, len(output) - 1 - start_index)
     for index in range(start_index, len(output)):
-        t = (index - start_index) / count
-        radius = start_radius * (1.0 - 0.72 * t)
-        radius = max(float(minimum_tip_radius), radius)
+        t = (index - start_index) / denominator
+        radius = max(float(minimum_tip_radius), start_radius * (1.0 - 0.72 * t))
         output[index] = (output[index][0], radius)
 
     branch["points"] = output
@@ -143,25 +130,27 @@ def _children_map(branches):
     return children
 
 
-def _descendant_ids(children, root_ids):
-    remove = set(int(value) for value in root_ids)
-    stack = list(remove)
+def _subtree(root, children):
+    result = []
+    stack = [root]
+    seen = set()
     while stack:
-        branch_id = stack.pop()
-        for child in children.get(branch_id, ()):
-            child_id = int(child.get("id", -1))
-            if child_id not in remove:
-                remove.add(child_id)
-                stack.append(child_id)
-    return remove
+        branch = stack.pop()
+        branch_id = int(branch.get("id", -1))
+        if branch_id in seen:
+            continue
+        seen.add(branch_id)
+        result.append(branch)
+        stack.extend(children.get(branch_id, ()))
+    return result
 
 
 def _upper_side_azimuth(parent, factor, rng):
-    """Choose the side of a curved parent that points most upward in world space."""
+    """Prefer the upper side of an already-curved parent for an axis takeover."""
     _point, _radius, tangent = generator._point_on_polyline(parent, factor)
     u, v = generator._basis(tangent)
-    horizontal_energy = abs(float(u.z)) + abs(float(v.z))
-    if horizontal_energy < 0.08:
+    energy = abs(float(u.z)) + abs(float(v.z))
+    if energy < 0.08:
         return rng.uniform(0.0, math.tau)
     return math.atan2(float(v.z), float(u.z)) + rng.uniform(-0.22, 0.22)
 
@@ -182,7 +171,6 @@ def _make_relay(settings, parent, branch_id, rng, factor, *, second=False):
         upward = rng.uniform(0.27, 0.41)
         bend = float(settings.branch_bend) * rng.uniform(0.60, 0.82)
 
-    azimuth = _upper_side_azimuth(parent, factor, rng)
     return willow_architecture._make_lateral_branch(
         settings,
         parent,
@@ -190,7 +178,7 @@ def _make_relay(settings, parent, branch_id, rng, factor, *, second=False):
         rng,
         level=1,
         factor=factor,
-        azimuth=azimuth,
+        azimuth=_upper_side_azimuth(parent, factor, rng),
         length_ratio=length_ratio,
         radius_ratio=radius_ratio,
         forward=forward,
@@ -209,11 +197,8 @@ def _make_relay(settings, parent, branch_id, rng, factor, *, second=False):
 
 
 def _add_relay_scaffolds(settings, branches, parent, next_id, rng, count, daughter_chance):
-    """Add obliquely upright structural laterals that later become weeping parents."""
-    terminals = []
     if count <= 0:
-        return next_id, terminals
-
+        return next_id
     phase = rng.uniform(0.0, math.tau)
     for index in range(count):
         factor = _clamp(
@@ -238,10 +223,7 @@ def _add_relay_scaffolds(settings, branches, parent, next_id, rng, count, daught
             bend=float(settings.branch_bend) * rng.uniform(0.78, 1.00),
             droop=float(settings.branch_droop) * rng.uniform(0.48, 0.76),
             collar_scale=0.86,
-            metadata={
-                "willow_relay_scaffold": True,
-                "willow_architecture_added": True,
-            },
+            metadata={"willow_relay_scaffold": True, "willow_architecture_added": True},
         )
         next_id += 1
         branches.append(child)
@@ -263,18 +245,74 @@ def _add_relay_scaffolds(settings, branches, parent, next_id, rng, count, daught
                 bend=float(settings.branch_bend) * rng.uniform(0.96, 1.18),
                 droop=float(settings.branch_droop) * rng.uniform(1.02, 1.28),
                 collar_scale=0.72,
-                metadata={
-                    "willow_relay_scaffold": True,
-                    "willow_architecture_added": True,
-                },
+                metadata={"willow_relay_scaffold": True, "willow_architecture_added": True},
             )
             next_id += 1
             branches.append(daughter)
-            terminals.append(daughter)
-        else:
-            terminals.append(child)
+    return next_id
 
-    return next_id, terminals
+
+def _transform_subtree(subtree, old_origin, new_origin, rotation, level_delta=1):
+    for branch in subtree:
+        transformed = []
+        for point, radius in branch.get("points", ()):
+            transformed.append((new_origin + rotation @ (point - old_origin), float(radius)))
+        if transformed:
+            branch["points"] = transformed
+            branch["length"] = generator._polyline_length(branch)
+        branch["level"] = min(4, max(1, int(branch.get("level", 1)) + level_delta))
+        branch["willow_relay_reparented"] = True
+
+
+def _transfer_upper_subtrees(branches, trunk, cutoff_factor, relay_axes):
+    """Move complete former upper-trunk subtrees onto the new relay chain."""
+    if not relay_axes:
+        return 0
+    children = _children_map(branches)
+    trunk_id = int(trunk.get("id", 0))
+    protected = {int(branch.get("id", -1)) for branch in relay_axes}
+    candidates = []
+
+    for root in children.get(trunk_id, ()):
+        root_id = int(root.get("id", -1))
+        if root_id in protected or root.get("willow_root_buttress", False):
+            continue
+        points = root.get("points", ())
+        if not points:
+            continue
+        factor = _closest_factor(trunk, points[0][0])
+        if factor > cutoff_factor:
+            candidates.append((factor, root))
+
+    candidates.sort(key=lambda item: item[0])
+    transferred = 0
+    for factor, root in candidates:
+        q = _clamp((factor - cutoff_factor) / max(1.0 - cutoff_factor, 1.0e-5))
+        if len(relay_axes) >= 2 and q >= 0.47:
+            parent = relay_axes[1]
+            local_q = _clamp((q - 0.47) / 0.53)
+            target_factor = 0.26 + 0.62 * local_q
+        else:
+            parent = relay_axes[0]
+            local_q = _clamp(q / 0.47) if len(relay_axes) >= 2 else q
+            target_factor = 0.28 + 0.58 * local_q
+
+        old_origin, _old_radius, old_tangent = generator._point_on_polyline(trunk, factor)
+        new_origin, _new_radius, new_tangent = generator._point_on_polyline(parent, _clamp(target_factor, 0.24, 0.90))
+        try:
+            rotation = old_tangent.rotation_difference(new_tangent)
+        except Exception:
+            rotation = None
+        if rotation is None:
+            continue
+
+        subtree = _subtree(root, children)
+        _transform_subtree(subtree, old_origin, new_origin, rotation, level_delta=1)
+        root["parent_id"] = int(parent.get("id", -1))
+        root["willow_relay_attachment_factor"] = float(target_factor)
+        transferred += len(subtree)
+
+    return transferred
 
 
 def _recompute_terminals(branches):
@@ -296,28 +334,6 @@ def _recompute_terminals(branches):
     ]
 
 
-def _prune_generic_upper_trunk(branches, trunk, cutoff_factor, protected_ids):
-    """Remove generic subtrees whose top-level attachment would sit on the aborted trunk."""
-    children = _children_map(branches)
-    roots_to_remove = []
-    trunk_id = int(trunk.get("id", 0))
-    for branch in children.get(trunk_id, ()):
-        branch_id = int(branch.get("id", -1))
-        if branch_id in protected_ids or branch.get("willow_root_buttress", False):
-            continue
-        points = branch.get("points", ())
-        if not points:
-            continue
-        factor = _closest_factor(trunk, points[0][0])
-        if factor > cutoff_factor:
-            roots_to_remove.append(branch_id)
-
-    remove_ids = _descendant_ids(children, roots_to_remove)
-    if not remove_ids:
-        return branches, 0
-    return [branch for branch in branches if int(branch.get("id", -1)) not in remove_ids], len(remove_ids)
-
-
 def _generate_relay_willow(settings):
     branches, terminals = _PREVIOUS_GENERATE(settings)
     if str(getattr(settings, "species_preset", "")) != "WILLOW" or not branches:
@@ -333,21 +349,13 @@ def _generate_relay_willow(settings):
     rng = random.Random(int(settings.seed) ^ 0x5A11C0DE)
     next_id = _new_id(branches)
 
-    # A natural mature willow still has a basal trunk.  The first axis takeover
-    # occurs well below mid-crown, then the parent axis ends soon after it.
     first_factor = rng.uniform(0.265, 0.325)
     first_relay = _make_relay(settings, trunk, next_id, rng, first_factor, second=False)
     next_id += 1
     branches.append(first_relay)
-
-    next_id, _first_terminals = _add_relay_scaffolds(
-        settings,
-        branches,
-        first_relay,
-        next_id,
-        rng,
-        int(cfg["first_scaffolds"]),
-        float(cfg["daughter_chance"]),
+    next_id = _add_relay_scaffolds(
+        settings, branches, first_relay, next_id, rng,
+        int(cfg["first_scaffolds"]), float(cfg["daughter_chance"]),
     )
 
     relay_axes = [first_relay]
@@ -357,22 +365,13 @@ def _generate_relay_willow(settings):
         next_id += 1
         branches.append(second_relay)
         relay_axes.append(second_relay)
-        next_id, _second_terminals = _add_relay_scaffolds(
-            settings,
-            branches,
-            second_relay,
-            next_id,
-            rng,
-            int(cfg["second_scaffolds"]),
-            float(cfg["daughter_chance"]) * 0.86,
+        next_id = _add_relay_scaffolds(
+            settings, branches, second_relay, next_id, rng,
+            int(cfg["second_scaffolds"]), float(cfg["daughter_chance"]) * 0.86,
         )
 
-    # Remove generic crown subtrees that were attached to the portion of trunk
-    # which biologically no longer exists.  Keep the new relay and buttress roots.
     trunk_cutoff = min(0.42, first_factor + rng.uniform(0.050, 0.070))
-    protected = {int(branch.get("id", -1)) for branch in relay_axes}
-    branches, removed = _prune_generic_upper_trunk(branches, trunk, trunk_cutoff, protected)
-
+    transferred = _transfer_upper_subtrees(branches, trunk, trunk_cutoff, relay_axes)
     _truncate_branch(
         trunk,
         trunk_cutoff,
@@ -380,17 +379,17 @@ def _generate_relay_willow(settings):
     )
 
     terminals = _recompute_terminals(branches)
-    trunk["willow_relay_architecture_version"] = 1
+    trunk["willow_relay_architecture_version"] = 2
     trunk["willow_first_relay_fraction"] = float(first_factor)
     trunk["willow_trunk_cutoff_fraction"] = float(trunk_cutoff)
     trunk["willow_trunk_terminated"] = True
     trunk["willow_relay_count"] = len(relay_axes)
-    trunk["willow_removed_upper_branch_records"] = int(removed)
+    trunk["willow_transferred_branch_records"] = int(transferred)
     return branches, terminals
 
 
 def prepare():
-    """Disable the older forced co-dominant leaders before willow_architecture installs."""
+    """Disable the older forced equal co-dominant leaders before architecture installs."""
     global _PREPARED
     if _PREPARED:
         return
