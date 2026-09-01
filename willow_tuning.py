@@ -1,9 +1,8 @@
-"""Target-driven structural and palette tuning for the weeping willow preset.
+"""Research-driven structural and palette tuning for the weeping willow preset.
 
-This module patches only WILLOW at registration so other species remain
-untouched.  The v0.8.7 values assume dedicated real topology, hierarchy-aware
-structural motion, post-deformation radial anchor scoring and final strand-level
-canopy shaping.
+0.9.0 assumes sympodial relay axes: the basal trunk terminates, vigorous distal
+shoots continue height, and obliquely upright lateral scaffolds support the
+strongly pendulous fine crown.  Other species remain untouched.
 """
 
 from . import pbr_profiles, presets, species_appearance
@@ -20,36 +19,36 @@ WILLOW_PRESET_TUNING = {
     "base_radius": 0.72,
     "trunk_segments": 30,
     "trunk_irregularity": 0.30,
-    "trunk_taper": 1.32,
+    "trunk_taper": 1.28,
     "root_flare": 0.82,
     "crown_shape": "ROUND",
     "branch_distribution": "RANDOM",
 
-    # The 0.8.6 tree was still too fountain-like. Push the reduced set of real
-    # generic primaries farther sideways; the co-dominant/fork layer supplies
-    # the irregular hierarchy instead of adding more radial spokes.
+    # Heavy willow scaffolds are obliquely upright at origin.  The hierarchy-
+    # aware motion layer supplies progressively stronger distal gravity to fine
+    # branches, rather than making the major limbs horizontal at birth.
     "branch_levels": 4,
-    "branch_start": 0.23,
-    "primary_branches": 9,
+    "branch_start": 0.18,
+    "primary_branches": 10,
     "secondary_per_branch": 4,
-    "branch_angle": 1.22,
-    "branch_length": 7.5,
+    "branch_angle": 0.96,
+    "branch_length": 6.8,
     "branch_length_randomness": 0.34,
-    "branch_bend": 0.30,
-    "branch_droop": 0.18,
-    "apical_dominance": 0.03,
-    "phototropism": 0.055,
+    "branch_bend": 0.29,
+    "branch_droop": 0.11,
+    "apical_dominance": 0.16,
+    "phototropism": 0.14,
     "branch_collar": 0.44,
     "dead_branch_probability": 0.015,
     "prune_probability": 0.012,
 
-    # Slightly lower global density than 0.8.6 because the final radial pass now
-    # deliberately moves the visual budget outward instead of filling the core.
-    "foliage_density": 1.70,
-    "foliage_start": 0.23,
-    "foliage_tip_bias": 0.44,
-    "foliage_spread": 0.76,
-    "leaf_up_bias": 0.18,
+    # Salix babylonica forms a dense broad crown.  Keep abundant real terminal
+    # growth and bias the longest curtains distally instead of hollowing the core.
+    "foliage_density": 1.86,
+    "foliage_start": 0.25,
+    "foliage_tip_bias": 0.56,
+    "foliage_spread": 0.74,
+    "leaf_up_bias": 0.16,
 
     "card_scale": 0.50,
     "card_aspect": 1.60,
@@ -58,9 +57,6 @@ WILLOW_PRESET_TUNING = {
 
 
 WILLOW_PBR_TUNING = {
-    # The previous tree was still much brighter than the mature reference.
-    # Keep chroma but lower luminance substantially; Respect Tree Colors derives
-    # its default tint from this same palette, so atlas and shader stay coherent.
     "leaf_color": (0.030, 0.145, 0.012),
     "leaf_color_2": (0.145, 0.340, 0.040),
     "vein_color": (0.205, 0.430, 0.070),
