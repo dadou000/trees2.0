@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 5, 1),
+    "version": (0, 6, 0),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with species-aware smart foliage assembly, continuous willow curtains, species-correct PBR, competition growth, realistic branch profiles, stable LODs, impostors, and one-click GitHub updates",
+    "description": "Procedural game-ready trees with high-fidelity species bark synthesis, smart foliage assembly, species-correct PBR, stable LODs, impostors, and GitHub updates",
     "category": "Add Mesh",
 }
 
@@ -14,6 +14,7 @@ from . import (
     advanced_properties,
     advanced_ui,
     appearance_state,
+    bark_synthesis,
     branch_profile_properties,
     branch_profile_ui,
     branch_profiles,
@@ -47,29 +48,17 @@ def register():
     pbr_properties.register()
     appearance_state.install()
     advanced_growth.install()
-    # Radius profiles run after stochastic/competition growth so they can
-    # reshape thickness without changing branch positions or RNG decisions.
     branch_profiles.install()
-    # Smart assembly replaces coincident Cross/Tri bundles with deterministic
-    # parent-aligned single-card instances and species-specific assembly modes.
-    # It must install before position sizing so sizing wraps the smart records.
     foliage_assembly.install()
     foliage_assembly_lods.install()
     foliage_atlas_assembly.install()
-    # Refine willow after the base assembly/atlas/LOD hooks exist. The v0.5.1
-    # path derives card spacing from source-card coverage and preserves
-    # continuous pendulous strands through LOD reduction.
     willow_foliage_fix.install()
-    # Position sizing runs after foliage placement and only changes card scale,
-    # preserving the stable master population used by the LOD system.
     foliage_sizing.install()
     exact_junctions.install()
-    # Patch Generate LOD Set before the original operator classes are registered.
     advanced_operators.register()
     operators.register()
     procedural_pbr.register()
-    # Wrap PBR generation after its operators exist so generated maps are also
-    # pushed into the currently selected tree and its hidden card sources.
+    bark_synthesis.install()
     pbr_live_apply.install()
     ui.register()
     advanced_ui.register()
@@ -89,6 +78,7 @@ def unregister():
     advanced_ui.unregister()
     ui.unregister()
     pbr_live_apply.uninstall()
+    bark_synthesis.uninstall()
     procedural_pbr.unregister()
     operators.unregister()
     advanced_operators.unregister()
