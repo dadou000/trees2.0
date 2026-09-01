@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 9, 0),
+    "version": (0, 9, 1),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with research-based sympodial willow relay growth, hierarchy-aware structural motion, dense curtain canopies, direct PBR export, stable LODs, impostors, and GitHub updates",
+    "description": "Procedural game-ready trees with research-based sympodial willow relay growth, adaptively resampled sinuous branches, dense curtain canopies, direct PBR export, stable LODs, impostors, and GitHub updates",
     "category": "Add Mesh",
 }
 
@@ -45,6 +45,7 @@ from . import (
     willow_foliage_fix,
     willow_leaf_synthesis,
     willow_relay_architecture,
+    willow_sinuous_geometry,
     willow_structure_motion,
     willow_tuning,
 )
@@ -61,7 +62,7 @@ def register():
     advanced_growth.install()
     branch_profiles.install()
 
-    # Willow 0.9: research-based sympodial architecture.  Suppress the older
+    # Willow 0.9: research-based sympodial architecture. Suppress the older
     # artificial equal co-dominant leaders, retain roots/scaffold augmentation,
     # then physically terminate the basal trunk and continue height through
     # successive vigorous relay axes.
@@ -69,8 +70,14 @@ def register():
     willow_architecture.install()
     willow_relay_architecture.install()
 
-    # Bend the complete relay hierarchy while preserving child attachment frames.
+    # First deform the complete relay hierarchy with correlated botanical motion.
     willow_structure_motion.install()
+
+    # Sparse polyline control points cannot produce mature willow wood by
+    # themselves. Fair/resample the major axes and add broad alternating 3D
+    # curvature before the branch rings are meshed. Child attachments are
+    # remapped to the processed parent frame, so junctions remain coincident.
+    willow_sinuous_geometry.install()
 
     # Give the resulting scaffold/relay subtrees a modest broad-crown correction.
     willow_crown_spread.install()
@@ -82,10 +89,6 @@ def register():
     foliage_assembly_lods.install()
     foliage_atlas_assembly.install()
     willow_foliage_fix.install()
-
-    # The former radial strand-deletion pass is intentionally inactive.  Mature
-    # Salix babylonica has a dense rounded crown; inner volume is created with
-    # shorter curtains rather than deleting whole curtain groups.
 
     foliage_sizing.install()
     exact_junctions.install()
@@ -141,6 +144,7 @@ def unregister():
     foliage_assembly.uninstall()
     willow_anchor_distribution.uninstall()
     willow_crown_spread.uninstall()
+    willow_sinuous_geometry.uninstall()
     willow_structure_motion.uninstall()
     willow_relay_architecture.uninstall()
     willow_architecture.uninstall()
