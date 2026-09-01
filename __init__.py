@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 8, 6),
+    "version": (0, 8, 7),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with forked mature willow topology, hierarchy-aware structural motion, volumetric curtain foliage, direct 16-bit PBR export, stable LODs, impostors, and GitHub updates",
+    "description": "Procedural game-ready trees with broad radial willow crowns, final-skeleton anchor scoring, strand-level canopy shaping, forked topology, PBR export, stable LODs, impostors, and GitHub updates",
     "category": "Add Mesh",
 }
 
@@ -38,8 +38,11 @@ from . import (
     properties,
     ui,
     update_checker,
+    willow_anchor_distribution,
     willow_architecture,
     willow_bark_synthesis,
+    willow_canopy_tuning,
+    willow_crown_spread,
     willow_foliage_fix,
     willow_leaf_synthesis,
     willow_structure_motion,
@@ -58,21 +61,29 @@ def register():
     advanced_growth.install()
     branch_profiles.install()
 
-    # First expand the generic willow skeleton with a deliberately small amount
-    # of real medium-scale topology: low co-dominant leaders, structural forks,
-    # scaffold laterals and buttress roots.  The layer also marks selected woody
-    # limbs as virtual foliage supports.
+    # 1) Add sparse real mature-willow topology before deformation.
     willow_architecture.install()
 
-    # Then deform the complete hierarchy.  Child attachments are remapped onto
-    # already-curved parents, so both original and architecture-added branches
-    # inherit coherent motion without opening their junctions.
+    # 2) Bend the complete hierarchy while preserving child attachment frames.
     willow_structure_motion.install()
+
+    # 3) Expand complete primary subtrees horizontally.  Descendants receive
+    # the same transform as their parent, so the broader dome keeps junctions.
+    willow_crown_spread.install()
+
+    # 4) Re-score virtual foliage supports on the *final* curved/spread skeleton.
+    # This replaces the older provisional pre-deformation anchor selection.
+    willow_anchor_distribution.install()
 
     foliage_assembly.install()
     foliage_assembly_lods.install()
     foliage_atlas_assembly.install()
     willow_foliage_fix.install()
+
+    # 5) Shape whole willow curtains radially/vertically after continuous card
+    # placement: open the center, shorten top antennas and favor the outer fringe.
+    willow_canopy_tuning.install()
+
     foliage_sizing.install()
     exact_junctions.install()
     advanced_operators.register()
@@ -89,8 +100,7 @@ def register():
     leaf_synthesis_runtime.install()
     willow_leaf_synthesis.install()
 
-    # Final willow defaults are target-driven. Install after the general leaf
-    # renderer so the structural and palette tuning is the final species state.
+    # Final willow defaults are target-driven and include the darker palette.
     willow_tuning.install()
     pbr_live_apply.install()
     ui.register()
@@ -123,10 +133,13 @@ def unregister():
     advanced_operators.unregister()
     exact_junctions.uninstall()
     foliage_sizing.uninstall()
+    willow_canopy_tuning.uninstall()
     willow_foliage_fix.uninstall()
     foliage_atlas_assembly.uninstall()
     foliage_assembly_lods.uninstall()
     foliage_assembly.uninstall()
+    willow_anchor_distribution.uninstall()
+    willow_crown_spread.uninstall()
     willow_structure_motion.uninstall()
     willow_architecture.uninstall()
     branch_profiles.uninstall()
