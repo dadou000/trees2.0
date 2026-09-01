@@ -51,15 +51,17 @@ class TREES2_PT_FoliageAssembly(bpy.types.Panel):
             willow.label(text="Weeping Curtains")
             willow.prop(assembly, "willow_length")
             willow.prop(assembly, "willow_ground_reach")
+            willow.prop(assembly, "willow_overlap")
             willow.prop(assembly, "willow_spacing")
             willow.prop(assembly, "willow_flutter")
             willow.prop(assembly, "willow_max_cards")
-            willow.label(text="Strands transition from twig direction toward gravity.")
+            willow.label(text="Card spacing is derived from actual source-card coverage.")
+            willow.label(text="Overlap keeps each hanging strand visually continuous.")
 
         debug = layout.box()
         debug.label(text="Export")
         debug.prop(assembly, "write_debug_attributes")
-        debug.label(text="LOD sets still derive from one deterministic master population.")
+        debug.label(text="LOD sets derive from one deterministic master population.")
 
 
 CLASSES = (TREES2_PT_FoliageAssembly,)
