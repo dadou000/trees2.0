@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 8, 7),
+    "version": (0, 8, 8),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with broad radial willow crowns, final-skeleton anchor scoring, strand-level canopy shaping, forked topology, PBR export, stable LODs, impostors, and GitHub updates",
+    "description": "Procedural game-ready trees with low multi-leader willow forks, hierarchy-aware structural motion, radial curtain canopies, direct PBR export, stable LODs, impostors, and GitHub updates",
     "category": "Add Mesh",
 }
 
@@ -44,6 +44,7 @@ from . import (
     willow_canopy_tuning,
     willow_crown_spread,
     willow_foliage_fix,
+    willow_fork_dominance,
     willow_leaf_synthesis,
     willow_structure_motion,
     willow_tuning,
@@ -64,15 +65,18 @@ def register():
     # 1) Add sparse real mature-willow topology before deformation.
     willow_architecture.install()
 
-    # 2) Bend the complete hierarchy while preserving child attachment frames.
+    # 2) Break the remaining single-pole silhouette: add extra heavy leaders in
+    # empty sectors and subordinate the original upper trunk above the fork zone.
+    willow_fork_dominance.install()
+
+    # 3) Bend the complete hierarchy while preserving child attachment frames.
     willow_structure_motion.install()
 
-    # 3) Expand complete primary subtrees horizontally.  Descendants receive
-    # the same transform as their parent, so the broader dome keeps junctions.
+    # 4) Expand complete primary subtrees horizontally. Descendants receive the
+    # same transform as their parent, so the broader dome keeps junctions.
     willow_crown_spread.install()
 
-    # 4) Re-score virtual foliage supports on the *final* curved/spread skeleton.
-    # This replaces the older provisional pre-deformation anchor selection.
+    # 5) Re-score virtual foliage supports on the final curved/spread skeleton.
     willow_anchor_distribution.install()
 
     foliage_assembly.install()
@@ -80,8 +84,8 @@ def register():
     foliage_atlas_assembly.install()
     willow_foliage_fix.install()
 
-    # 5) Shape whole willow curtains radially/vertically after continuous card
-    # placement: open the center, shorten top antennas and favor the outer fringe.
+    # 6) Shape whole willow curtains radially/vertically after continuous card
+    # placement rather than deleting individual cards.
     willow_canopy_tuning.install()
 
     foliage_sizing.install()
@@ -141,6 +145,7 @@ def unregister():
     willow_anchor_distribution.uninstall()
     willow_crown_spread.uninstall()
     willow_structure_motion.uninstall()
+    willow_fork_dominance.uninstall()
     willow_architecture.uninstall()
     branch_profiles.uninstall()
     advanced_growth.uninstall()
