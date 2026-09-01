@@ -1,9 +1,8 @@
 """Target-driven structural and palette tuning for the weeping willow preset.
 
-This module deliberately patches only the WILLOW preset/profile at registration
-so other species are unaffected.  It is installed after the general willow leaf
-renderer, making these values the final defaults used when the user presses
-Apply Species Preset or regenerates PBR textures.
+This module patches only WILLOW at registration so other species remain
+untouched.  Values are tuned against a mature broad/rounded weeping-willow
+reference rather than the generic umbrella profile.
 """
 
 from . import pbr_profiles, presets, species_appearance
@@ -16,72 +15,69 @@ _OLD_APPEARANCE = None
 
 
 WILLOW_PRESET_TUNING = {
-    # Keep a mature-but-not-gigantic tree, but make the crown substantially wider.
-    "height": 13.5,
-    "base_radius": 0.64,
+    # Broader-than-tall crown.  The ROUND profile gives long middle scaffold
+    # branches over a wider height range; the weeping character is then created
+    # by secondary/virtual branchlets instead of a narrow Gaussian umbrella.
+    "height": 12.6,
+    "base_radius": 0.68,
     "trunk_irregularity": 0.24,
-    "trunk_taper": 0.84,
-    "root_flare": 0.50,
-    "crown_shape": "UMBRELLA",
+    "trunk_taper": 1.16,
+    "root_flare": 0.55,
+    "crown_shape": "ROUND",
     "branch_distribution": "RANDOM",
 
-    # Real weeping willows read as a handful of broad scaffold limbs carrying a
-    # large number of finer branchlets, not dozens of equal radial spokes.
+    # A modest number of heavy scaffolds plus many finer descendants.  Stronger
+    # trunk taper prevents the straight central leader from dominating the crown.
     "branch_levels": 4,
-    "branch_start": 0.22,
-    "primary_branches": 12,
+    "branch_start": 0.18,
+    "primary_branches": 14,
     "secondary_per_branch": 4,
-    "branch_angle": 1.30,
-    "branch_length": 7.1,
-    "branch_length_randomness": 0.34,
-    "branch_bend": 0.33,
-
-    # Heavy scaffold branches should arch/spread first.  Droop is progressively
-    # multiplied by generation depth, so this lower base value makes the thin
-    # third/fourth-order branchlets weep while keeping major limbs broad.
-    "branch_droop": 0.34,
-    "apical_dominance": 0.06,
+    "branch_angle": 1.28,
+    "branch_length": 7.8,
+    "branch_length_randomness": 0.30,
+    "branch_bend": 0.38,
+    "branch_droop": 0.27,
+    "apical_dominance": 0.04,
     "phototropism": 0.10,
-    "branch_collar": 0.38,
-    "dead_branch_probability": 0.020,
-    "prune_probability": 0.018,
+    "branch_collar": 0.40,
+    "dead_branch_probability": 0.018,
+    "prune_probability": 0.015,
 
-    # More crown fill, less extreme tip-only population.  Smart willow assembly
-    # then redistributes these terminals into short/mid curtain bundles.
-    "foliage_density": 1.62,
-    "foliage_start": 0.34,
-    "foliage_tip_bias": 0.62,
-    "foliage_spread": 0.62,
-    "leaf_up_bias": 0.22,
+    # Dense foliage over most of the outer half of the crown.  Smart willow
+    # assembly keeps the lower central trunk open and creates the long fringe.
+    "foliage_density": 1.80,
+    "foliage_start": 0.24,
+    "foliage_tip_bias": 0.48,
+    "foliage_spread": 0.70,
+    "leaf_up_bias": 0.20,
 
-    # Smaller, nearly uniform cards hide the card primitive and permit denser
-    # volume for approximately the same silhouette cost.
-    "card_scale": 0.56,
-    "card_aspect": 1.65,
+    # Smaller cards + more instances read as fine willow texture instead of
+    # isolated ribbons.  Source cards remain single GN instances.
+    "card_scale": 0.50,
+    "card_aspect": 1.60,
     "card_style": "SINGLE",
 }
 
 
 WILLOW_PBR_TUNING = {
-    # Darker chlorophyll-rich base than the previous lime-biased default, with a
-    # bright enough second color to retain local saturation and sunlit variation.
-    "leaf_color": (0.075, 0.300, 0.030),
-    "leaf_color_2": (0.285, 0.555, 0.085),
-    "vein_color": (0.385, 0.625, 0.135),
-    "leaf_roughness": 0.61,
+    # Dark saturated chlorophyll base with a controlled yellow-green highlight.
+    # Dense overlap should create the target's deep green interior rather than
+    # the pale lime appearance of the previous sparse crown.
+    "leaf_color": (0.050, 0.220, 0.022),
+    "leaf_color_2": (0.205, 0.455, 0.065),
+    "vein_color": (0.300, 0.535, 0.095),
+    "leaf_roughness": 0.59,
     "leaf_normal_strength": 0.50,
-    "twig_color": (0.18, 0.115, 0.045),
+    "twig_color": (0.20, 0.13, 0.050),
 }
 
 
 WILLOW_APPEARANCE_TUNING = {
-    # A fuller sprig source card improves the dark overlapping mass of a willow
-    # curtain without changing individual blade scale.
-    "leaf_count": 10,
+    "leaf_count": 11,
     "leaf_aspect": 4.35,
     "serration": 0.035,
     "tip_sharpness": 0.95,
-    "morphology_label": "Willow alternate lanceolate leaves on a pendulous sprig",
+    "morphology_label": "Willow alternate linear-lanceolate leaves on a pendulous sprig",
 }
 
 
