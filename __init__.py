@@ -19,6 +19,7 @@ from . import (
     branch_profiles,
     exact_junctions,
     foliage_assembly,
+    foliage_assembly_lods,
     foliage_assembly_properties,
     foliage_assembly_ui,
     foliage_atlas_assembly,
@@ -52,6 +53,7 @@ def register():
     # parent-aligned single-card instances and species-specific assembly modes.
     # It must install before position sizing so sizing wraps the smart records.
     foliage_assembly.install()
+    foliage_assembly_lods.install()
     foliage_atlas_assembly.install()
     # Position sizing runs after foliage placement and only changes card scale,
     # preserving the stable master population used by the LOD system.
@@ -88,6 +90,7 @@ def unregister():
     exact_junctions.uninstall()
     foliage_sizing.uninstall()
     foliage_atlas_assembly.uninstall()
+    foliage_assembly_lods.uninstall()
     foliage_assembly.uninstall()
     branch_profiles.uninstall()
     advanced_growth.uninstall()
