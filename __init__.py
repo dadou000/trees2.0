@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 4, 4),
+    "version": (0, 5, 0),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with species-correct foliage morphology, authoritative tree colors, PBR synthesis, competition growth, realistic branch profiles, stable LODs, impostors, and one-click GitHub updates",
+    "description": "Procedural game-ready trees with species-aware smart foliage assembly, species-correct PBR, competition growth, realistic branch profiles, stable LODs, impostors, and one-click GitHub updates",
     "category": "Add Mesh",
 }
 
@@ -18,6 +18,10 @@ from . import (
     branch_profile_ui,
     branch_profiles,
     exact_junctions,
+    foliage_assembly,
+    foliage_assembly_properties,
+    foliage_assembly_ui,
+    foliage_atlas_assembly,
     foliage_sizing,
     foliage_sizing_properties,
     foliage_sizing_ui,
@@ -36,6 +40,7 @@ def register():
     properties.register()
     advanced_properties.register()
     branch_profile_properties.register()
+    foliage_assembly_properties.register()
     foliage_sizing_properties.register()
     pbr_properties.register()
     appearance_state.install()
@@ -43,6 +48,11 @@ def register():
     # Radius profiles run after stochastic/competition growth so they can
     # reshape thickness without changing branch positions or RNG decisions.
     branch_profiles.install()
+    # Smart assembly replaces coincident Cross/Tri bundles with deterministic
+    # parent-aligned single-card instances and species-specific assembly modes.
+    # It must install before position sizing so sizing wraps the smart records.
+    foliage_assembly.install()
+    foliage_atlas_assembly.install()
     # Position sizing runs after foliage placement and only changes card scale,
     # preserving the stable master population used by the LOD system.
     foliage_sizing.install()
@@ -57,6 +67,7 @@ def register():
     ui.register()
     advanced_ui.register()
     branch_profile_ui.register()
+    foliage_assembly_ui.register()
     foliage_sizing_ui.register()
     pbr_ui.register()
     update_checker.register()
@@ -66,6 +77,7 @@ def unregister():
     update_checker.unregister()
     pbr_ui.unregister()
     foliage_sizing_ui.unregister()
+    foliage_assembly_ui.unregister()
     branch_profile_ui.unregister()
     advanced_ui.unregister()
     ui.unregister()
@@ -75,11 +87,14 @@ def unregister():
     advanced_operators.unregister()
     exact_junctions.uninstall()
     foliage_sizing.uninstall()
+    foliage_atlas_assembly.uninstall()
+    foliage_assembly.uninstall()
     branch_profiles.uninstall()
     advanced_growth.uninstall()
     appearance_state.uninstall()
     pbr_properties.unregister()
     foliage_sizing_properties.unregister()
+    foliage_assembly_properties.unregister()
     branch_profile_properties.unregister()
     advanced_properties.unregister()
     properties.unregister()
