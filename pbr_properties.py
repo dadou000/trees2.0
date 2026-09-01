@@ -12,8 +12,18 @@ class TREES2_PG_PBRSettings(bpy.types.PropertyGroup):
         description="Folder used for generated PNG texture sets",
     )
     leaf_resolution: IntProperty(
-        name="Leaf Atlas Resolution", default=512, min=128, max=2048,
-        description="Total square resolution of the generated leaf atlas",
+        name="Leaf Atlas Resolution", default=1024, min=128, max=4096,
+        description="Total square resolution of the generated leaf atlas; high resolutions can take a long time",
+    )
+    leaf_quality: EnumProperty(
+        name="Leaf Synthesis Quality",
+        items=(
+            ("HIGH", "High", "High-quality structural leaf synthesis at native atlas-cell resolution"),
+            ("ULTRA", "Ultra", "2x per-cell supersampling for cleaner silhouettes, veins and normals; recommended default"),
+            ("EXTREME", "Extreme", "3x per-cell supersampling for maximum edge and venation quality; very slow and memory intensive"),
+        ),
+        default="ULTRA",
+        description="Quality of the high-fidelity species-aware leaf and needle texture synthesizer",
     )
     bark_resolution: IntProperty(
         name="Bark Resolution", default=1024, min=128, max=4096,
@@ -36,7 +46,7 @@ class TREES2_PG_PBRSettings(bpy.types.PropertyGroup):
     seed_offset: IntProperty(name="Texture Seed Offset", default=0, min=0, max=2_147_483_647)
     leaf_detail: FloatProperty(
         name="Leaf Detail", default=1.0, min=0.25, max=2.5,
-        description="Multiplier for veins, serration and small leaf detail",
+        description="Multiplier for venation, serration, curvature, mottling and small leaf detail",
     )
     bark_detail: FloatProperty(
         name="Bark Detail", default=1.0, min=0.25, max=2.5,
@@ -62,6 +72,7 @@ class TREES2_PG_PBRSettings(bpy.types.PropertyGroup):
 
 CLASSES = (TREES2_PG_PBRSettings,)
 _DYNAMIC_TREE_PROPS = (
+    "leaf_translucency_image",
     "bark_roughness_image",
     "bark_height_image",
     "bark_ao_image",
@@ -69,8 +80,11 @@ _DYNAMIC_TREE_PROPS = (
 
 
 def register():
-    # These live on the normal tree settings so they survive the usual
-    # generation/regeneration flow just like bark_image and bark_normal_image.
+    # These live on the normal tree settings so they survive normal tree
+    # creation/regeneration and can be consumed by the live material builder.
+    properties.TREES2_PG_Settings.leaf_translucency_image = PointerProperty(
+        name="Leaf Translucency", type=bpy.types.Image
+    )
     properties.TREES2_PG_Settings.bark_roughness_image = PointerProperty(
         name="Bark Roughness", type=bpy.types.Image
     )
