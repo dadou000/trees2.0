@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 9, 2),
+    "version": (0, 9, 3),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with research-based sympodial willow growth, outward-biased scaffold/foliage distribution, sinuous branches, direct PBR export, stable LODs, impostors, and GitHub updates",
+    "description": "Procedural game-ready trees with research-based sympodial willow growth, smooth continuous crown envelopes, outward-biased scaffold distribution, sinuous branches, direct PBR export, stable LODs, impostors, and GitHub updates",
     "category": "Add Mesh",
 }
 
@@ -41,6 +41,7 @@ from . import (
     willow_anchor_distribution,
     willow_architecture,
     willow_bark_synthesis,
+    willow_crown_envelope,
     willow_crown_spread,
     willow_foliage_fix,
     willow_leaf_synthesis,
@@ -79,11 +80,12 @@ def register():
     willow_sinuous_geometry.install()
 
     # Broad-crown correction and final-skeleton virtual support scoring happen
-    # after all structural deformation.  Real terminals classified as mid/inner
-    # by the outward-distribution stage are then converted to reduced foliage
-    # budgets, while outer terminals retain full curtain authority.
+    # after all structural deformation.  The crown-envelope stage then smooths
+    # angular support density continuously around the finished crown, boosts real
+    # gaps with short fill supports and removes hard inner/mid/outer transitions.
     willow_crown_spread.install()
     willow_anchor_distribution.install()
+    willow_crown_envelope.install()
     willow_terminal_budget.install()
 
     foliage_assembly.install()
@@ -144,6 +146,7 @@ def unregister():
     foliage_assembly_lods.uninstall()
     foliage_assembly.uninstall()
     willow_terminal_budget.uninstall()
+    willow_crown_envelope.uninstall()
     willow_anchor_distribution.uninstall()
     willow_crown_spread.uninstall()
     willow_sinuous_geometry.uninstall()
