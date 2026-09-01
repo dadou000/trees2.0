@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 6, 0),
+    "version": (0, 7, 0),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with high-fidelity species bark synthesis, smart foliage assembly, species-correct PBR, stable LODs, impostors, and GitHub updates",
+    "description": "Procedural game-ready trees with high-fidelity species leaf and bark synthesis, smart foliage assembly, stable LODs, impostors, and GitHub updates",
     "category": "Add Mesh",
 }
 
@@ -27,6 +27,8 @@ from . import (
     foliage_sizing,
     foliage_sizing_properties,
     foliage_sizing_ui,
+    leaf_synthesis,
+    leaf_synthesis_runtime,
     operators,
     pbr_live_apply,
     pbr_properties,
@@ -59,6 +61,11 @@ def register():
     operators.register()
     procedural_pbr.register()
     bark_synthesis.install()
+    leaf_synthesis.install()
+    # Runtime integration assigns the generated translucency map, fixes atlas
+    # surface compositing and exposes conservative thin-leaf scattering to the
+    # material builder. Install before live-apply wraps PBR generation.
+    leaf_synthesis_runtime.install()
     pbr_live_apply.install()
     ui.register()
     advanced_ui.register()
@@ -78,6 +85,8 @@ def unregister():
     advanced_ui.unregister()
     ui.unregister()
     pbr_live_apply.uninstall()
+    leaf_synthesis_runtime.uninstall()
+    leaf_synthesis.uninstall()
     bark_synthesis.uninstall()
     procedural_pbr.unregister()
     operators.unregister()
