@@ -1,8 +1,9 @@
 """Target-driven structural and palette tuning for the weeping willow preset.
 
 This module patches only WILLOW at registration so other species remain
-untouched.  Values are tuned against a mature broad/rounded weeping-willow
-reference rather than the generic umbrella profile.
+untouched.  The v0.8.6 values assume the dedicated architecture layer supplies
+low co-dominant leaders, real intermediate forks and buttress roots.  Therefore
+the generic radial skeleton can be simpler and less spoke-like.
 """
 
 from . import pbr_profiles, presets, species_appearance
@@ -15,47 +16,47 @@ _OLD_APPEARANCE = None
 
 
 WILLOW_PRESET_TUNING = {
-    # Broader-than-tall crown.  The ROUND profile gives long middle scaffold
-    # branches over a wider height range; the weeping character is then created
-    # by secondary/virtual branchlets instead of a narrow Gaussian umbrella.
     "height": 12.6,
-    "base_radius": 0.68,
-    # Structural motion works on the generated polyline.  Extra trunk samples
-    # let the slow serpentine base/leader curvature remain visibly smooth.
-    "trunk_segments": 28,
-    "trunk_irregularity": 0.24,
-    "trunk_taper": 1.16,
-    "root_flare": 0.68,
+    "base_radius": 0.72,
+    # High sampling is useful because structural motion bends the trunk after
+    # botanical growth.  Faster taper lets low co-dominant limbs take over the
+    # crown instead of leaving one thick pole visible to the apex.
+    "trunk_segments": 30,
+    "trunk_irregularity": 0.30,
+    "trunk_taper": 1.32,
+    "root_flare": 0.82,
     "crown_shape": "ROUND",
     "branch_distribution": "RANDOM",
 
-    # A modest number of heavy scaffolds plus many finer descendants.  Stronger
-    # trunk taper prevents the straight central leader from dominating the crown.
+    # Fewer generic primaries.  The architecture layer adds a small number of
+    # deliberately placed leaders and intermediate forks, producing clustered
+    # asymmetry rather than an evenly populated radial star.
     "branch_levels": 4,
-    "branch_start": 0.18,
-    "primary_branches": 14,
+    "branch_start": 0.23,
+    "primary_branches": 9,
     "secondary_per_branch": 4,
-    "branch_angle": 1.28,
-    "branch_length": 7.8,
-    "branch_length_randomness": 0.30,
-    "branch_bend": 0.38,
-    "branch_droop": 0.27,
-    "apical_dominance": 0.04,
-    "phototropism": 0.10,
-    "branch_collar": 0.40,
-    "dead_branch_probability": 0.018,
-    "prune_probability": 0.015,
+    "branch_angle": 1.10,
+    "branch_length": 7.0,
+    "branch_length_randomness": 0.34,
+    # Base growth stays comparatively calm; hierarchy-aware motion supplies the
+    # large sweep, direction changes and fine-branch chaos afterwards.
+    "branch_bend": 0.30,
+    "branch_droop": 0.20,
+    "apical_dominance": 0.03,
+    "phototropism": 0.07,
+    "branch_collar": 0.44,
+    "dead_branch_probability": 0.015,
+    "prune_probability": 0.012,
 
-    # Dense foliage over most of the outer half of the crown.  Smart willow
-    # assembly keeps the lower central trunk open and creates the long fringe.
-    "foliage_density": 1.80,
-    "foliage_start": 0.24,
-    "foliage_tip_bias": 0.48,
-    "foliage_spread": 0.70,
+    # Keep the successful v0.8.x curtain density, but distribute it over the new
+    # real woody forks and virtual supports rather than compensating with larger
+    # cards.
+    "foliage_density": 1.78,
+    "foliage_start": 0.23,
+    "foliage_tip_bias": 0.46,
+    "foliage_spread": 0.72,
     "leaf_up_bias": 0.20,
 
-    # Smaller cards + more instances read as fine willow texture instead of
-    # isolated ribbons.  Source cards remain single GN instances.
     "card_scale": 0.50,
     "card_aspect": 1.60,
     "card_style": "SINGLE",
@@ -63,9 +64,6 @@ WILLOW_PRESET_TUNING = {
 
 
 WILLOW_PBR_TUNING = {
-    # Dark saturated chlorophyll base with a controlled yellow-green highlight.
-    # Dense overlap should create the target's deep green interior rather than
-    # the pale lime appearance of the previous sparse crown.
     "leaf_color": (0.050, 0.220, 0.022),
     "leaf_color_2": (0.205, 0.455, 0.065),
     "vein_color": (0.300, 0.535, 0.095),
