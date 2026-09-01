@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 5, 0),
+    "version": (0, 5, 1),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with species-aware smart foliage assembly, species-correct PBR, competition growth, realistic branch profiles, stable LODs, impostors, and one-click GitHub updates",
+    "description": "Procedural game-ready trees with species-aware smart foliage assembly, continuous willow curtains, species-correct PBR, competition growth, realistic branch profiles, stable LODs, impostors, and one-click GitHub updates",
     "category": "Add Mesh",
 }
 
@@ -34,6 +34,7 @@ from . import (
     properties,
     ui,
     update_checker,
+    willow_foliage_fix,
 )
 
 
@@ -55,6 +56,10 @@ def register():
     foliage_assembly.install()
     foliage_assembly_lods.install()
     foliage_atlas_assembly.install()
+    # Refine willow after the base assembly/atlas/LOD hooks exist. The v0.5.1
+    # path derives card spacing from source-card coverage and preserves
+    # continuous pendulous strands through LOD reduction.
+    willow_foliage_fix.install()
     # Position sizing runs after foliage placement and only changes card scale,
     # preserving the stable master population used by the LOD system.
     foliage_sizing.install()
@@ -89,6 +94,7 @@ def unregister():
     advanced_operators.unregister()
     exact_junctions.uninstall()
     foliage_sizing.uninstall()
+    willow_foliage_fix.uninstall()
     foliage_atlas_assembly.uninstall()
     foliage_assembly_lods.uninstall()
     foliage_assembly.uninstall()
