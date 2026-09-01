@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 8, 4),
+    "version": (0, 8, 5),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with broad rounded willow architecture, virtual drooping branchlets, volumetric curtain bundles, direct 16-bit PBR export, stable LODs, impostors, and GitHub updates",
+    "description": "Procedural game-ready trees with hierarchy-aware chaotic willow structure, broad rounded canopies, virtual drooping branchlets, volumetric curtain bundles, direct 16-bit PBR export, stable LODs, impostors, and GitHub updates",
     "category": "Add Mesh",
 }
 
@@ -42,6 +42,7 @@ from . import (
     willow_bark_synthesis,
     willow_foliage_fix,
     willow_leaf_synthesis,
+    willow_structure_motion,
     willow_tuning,
 )
 
@@ -57,9 +58,13 @@ def register():
     advanced_growth.install()
     branch_profiles.install()
 
-    # Wrap the fully installed skeleton generator. Willow keeps the real woody
-    # skeleton but exposes selected non-terminal limbs as virtual foliage
-    # supports, creating dense pendulous branchlets without extra branch mesh.
+    # Deform the final botanical skeleton first.  The wrapper is hierarchy-aware:
+    # child attachments are remapped onto already-curved parents before their
+    # own level-dependent wander and distal droop are integrated.
+    willow_structure_motion.install()
+
+    # Virtual willow foliage supports are selected after structural deformation,
+    # so their height/exposure scoring reflects the actual curved scaffold.
     willow_architecture.install()
 
     foliage_assembly.install()
@@ -121,6 +126,7 @@ def unregister():
     foliage_assembly_lods.uninstall()
     foliage_assembly.uninstall()
     willow_architecture.uninstall()
+    willow_structure_motion.uninstall()
     branch_profiles.uninstall()
     advanced_growth.uninstall()
     appearance_state.uninstall()
