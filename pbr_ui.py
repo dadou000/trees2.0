@@ -49,11 +49,17 @@ class TREES2_PT_ProceduralPBR(bpy.types.Panel):
 
         if pbr.generate_bark:
             bark = layout.box()
-            bark.label(text="Tileable Bark", icon="TEXTURE")
+            bark.label(text="High-Fidelity Tileable Bark", icon="TEXTURE")
             bark.prop(pbr, "bark_resolution")
+            bark.prop(pbr, "bark_quality")
             bark.prop(pbr, "bark_detail")
             bark.prop(pbr, "bark_normal_strength")
+            bark.label(text="Species-specific: ridges, plates, fibres, lenticels & peeling")
             bark.label(text="Outputs: Albedo, Normal, Roughness, Height, AO")
+            if pbr.bark_quality == "EXTREME":
+                warning = bark.row()
+                warning.alert = True
+                warning.label(text="Extreme can use substantial RAM and generation time.", icon="ERROR")
 
         options = layout.box()
         options.label(text="Output")
