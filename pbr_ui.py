@@ -39,13 +39,20 @@ class TREES2_PT_ProceduralPBR(bpy.types.Panel):
 
         if pbr.generate_leaves:
             leaf = layout.box()
-            leaf.label(text="Leaf / Needle Atlas", icon="IMAGE_DATA")
+            leaf.label(text="High-Fidelity Leaf / Needle Atlas", icon="IMAGE_DATA")
             leaf.prop(pbr, "leaf_resolution")
+            leaf.prop(pbr, "leaf_quality")
             leaf.prop(pbr, "atlas_grid")
             leaf.label(text=f"Variants: {pbr.atlas_grid * pbr.atlas_grid}")
             leaf.prop(pbr, "leaf_detail")
             leaf.prop(pbr, "leaf_normal_strength")
             leaf.label(text=f"Morphology: {appearance.get('morphology_label', 'Species default')}")
+            leaf.label(text="Species-specific silhouette, venation, curl, waxiness & damage")
+            leaf.label(text="Outputs: Albedo/Alpha, Normal, Roughness, Translucency")
+            if pbr.leaf_quality == "EXTREME":
+                warning = leaf.row()
+                warning.alert = True
+                warning.label(text="Extreme supersamples every atlas cell at 3x.", icon="ERROR")
 
         if pbr.generate_bark:
             bark = layout.box()
