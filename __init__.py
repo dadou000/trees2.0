@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 9, 3),
+    "version": (0, 9, 4),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with research-based sympodial willow growth, smooth continuous crown envelopes, outward-biased scaffold distribution, sinuous branches, direct PBR export, stable LODs, impostors, and GitHub updates",
+    "description": "Procedural game-ready trees with two-mesh game export, persistent GPU branch/foliage mappings, organized LOD assets, research-based willow architecture, direct PBR export, and impostors",
     "category": "Add Mesh",
 }
 
@@ -27,6 +27,10 @@ from . import (
     foliage_sizing,
     foliage_sizing_properties,
     foliage_sizing_ui,
+    game_asset_export,
+    game_asset_properties,
+    game_asset_runtime,
+    game_asset_ui,
     leaf_synthesis,
     leaf_synthesis_runtime,
     operators,
@@ -56,6 +60,7 @@ from . import (
 
 def register():
     properties.register()
+    game_asset_properties.register()
     advanced_properties.register()
     branch_profile_properties.register()
     foliage_assembly_properties.register()
@@ -95,8 +100,15 @@ def register():
 
     foliage_sizing.install()
     exact_junctions.install()
+
+    # Runtime mapping is deliberately installed after every geometry/foliage
+    # wrapper.  It records the final branch graph, longitudinal wood coordinates
+    # and foliage support bindings without changing the visible authoring tree.
+    game_asset_runtime.install()
+
     advanced_operators.register()
     operators.register()
+    game_asset_export.register()
     procedural_pbr.register()
 
     # All generated texture files go through one direct PNG pipeline. Non-color
@@ -112,6 +124,7 @@ def register():
     willow_tuning.install()
     pbr_live_apply.install()
     ui.register()
+    game_asset_ui.register()
     advanced_ui.register()
     branch_profile_ui.register()
     foliage_assembly_ui.register()
@@ -127,6 +140,7 @@ def unregister():
     foliage_assembly_ui.unregister()
     branch_profile_ui.unregister()
     advanced_ui.unregister()
+    game_asset_ui.unregister()
     ui.unregister()
     pbr_live_apply.uninstall()
     willow_tuning.uninstall()
@@ -137,8 +151,10 @@ def unregister():
     bark_synthesis.uninstall()
     pbr_pipeline.uninstall()
     procedural_pbr.unregister()
+    game_asset_export.unregister()
     operators.unregister()
     advanced_operators.unregister()
+    game_asset_runtime.uninstall()
     exact_junctions.uninstall()
     foliage_sizing.uninstall()
     willow_foliage_fix.uninstall()
@@ -163,4 +179,5 @@ def unregister():
     foliage_assembly_properties.unregister()
     branch_profile_properties.unregister()
     advanced_properties.unregister()
+    game_asset_properties.unregister()
     properties.unregister()
