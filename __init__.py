@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 9, 5),
+    "version": (0, 9, 6),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with corrected willow card orientation, organically blended exact junctions, two-mesh game export, persistent GPU mappings, organized LOD assets, direct PBR export, and impostors",
+    "description": "Procedural game-ready trees with hierarchy-balanced willow branches, corrected card orientation, organically blended junctions, two-mesh game export, persistent GPU mappings, direct PBR export, and impostors",
     "category": "Add Mesh",
 }
 
@@ -51,6 +51,7 @@ from . import (
     willow_crown_envelope,
     willow_crown_spread,
     willow_foliage_fix,
+    willow_hierarchy_balance,
     willow_leaf_synthesis,
     willow_outward_distribution,
     willow_relay_architecture,
@@ -87,11 +88,16 @@ def register():
     willow_structure_motion.install()
     willow_sinuous_geometry.install()
 
-    # Broad-crown correction and final-skeleton virtual support scoring happen
-    # after all structural deformation.  The crown-envelope stage then smooths
-    # angular support density continuously around the finished crown, boosts real
-    # gaps with short fill supports and removes hard inner/mid/outer transitions.
+    # Broad-crown shaping runs on the final curved wood.  Then enforce parent /
+    # child dimensional hierarchy before any foliage-support scoring: transferred
+    # old-trunk subtrees are rescaled to their new relay support, sibling roots are
+    # softly redistributed and local branch area/length budgets are normalized.
     willow_crown_spread.install()
+    willow_hierarchy_balance.install()
+
+    # Final-skeleton virtual support scoring and crown envelope use the corrected
+    # hierarchy, so foliage density cannot hide or amplify an impossible branch
+    # relationship.
     willow_anchor_distribution.install()
     willow_crown_envelope.install()
     willow_terminal_budget.install()
@@ -125,7 +131,7 @@ def register():
 
     advanced_operators.register()
     operators.register()
-    game_asset_export.GENERATOR_VERSION = "0.9.5"
+    game_asset_export.GENERATOR_VERSION = "0.9.6"
     game_asset_export.register()
     procedural_pbr.register()
 
@@ -185,6 +191,7 @@ def unregister():
     willow_terminal_budget.uninstall()
     willow_crown_envelope.uninstall()
     willow_anchor_distribution.uninstall()
+    willow_hierarchy_balance.uninstall()
     willow_crown_spread.uninstall()
     willow_sinuous_geometry.uninstall()
     willow_structure_motion.uninstall()
