@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 9, 8),
+    "version": (0, 9, 9),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with coherent willow scaffold crowns, real pendant switch branches, continuous relay handoffs, viable branch hierarchy, organic junctions, two-mesh runtime export, and GPU mappings",
+    "description": "Procedural game-ready trees with quality-driven willow scaffold crowns, continuous trunk-relay grafts, real pendant wood with short foliage runs, organic junctions, two-mesh runtime export, and GPU mappings",
     "category": "Add Mesh",
 }
 
@@ -50,6 +50,7 @@ from . import (
     willow_branch_viability,
     willow_card_orientation,
     willow_crown_envelope,
+    willow_crown_integrity,
     willow_crown_spread,
     willow_foliage_fix,
     willow_hierarchy_balance,
@@ -58,6 +59,7 @@ from . import (
     willow_pendant_priority,
     willow_pendant_switches,
     willow_relay_architecture,
+    willow_relay_final_continuity,
     willow_relay_handoff,
     willow_scaffold_crown,
     willow_sinuous_geometry,
@@ -79,15 +81,21 @@ def register():
     advanced_growth.install()
     branch_profiles.install()
 
-    # Build the sympodial topology and convert the first takeover into a true
-    # trunk continuation.  The coherent scaffold-crown pass then guarantees a
-    # small azimuthally distributed major support set, fills long empty spans
-    # with real secondaries and removes only the generic upper-core twig web.
+    # Reduce the number of fine pendant support parents before any tree is
+    # generated.  Detailed willow structure should come from secondary wood,
+    # not from dozens of independent curtain emitters.
+    willow_crown_integrity.prepare()
+
+    # Build the sympodial topology and initial hand-off.  The first scaffold pass
+    # supplies broad structure, then crown-integrity accepts only genuinely useful
+    # long/outward scaffolds, fills missing sectors including the lower crown and
+    # guarantees several distal secondaries on every dominant support.
     willow_relay_architecture.prepare()
     willow_architecture.install()
     willow_relay_architecture.install()
     willow_relay_handoff.install()
     willow_scaffold_crown.install()
+    willow_crown_integrity.install()
     willow_outward_distribution.install()
 
     # Deform the retained hierarchy with correlated botanical motion, then give
@@ -104,17 +112,20 @@ def register():
     willow_pendant_switches.install()
 
     # Final-skeleton anchor scoring and envelope equalization see the real switch
-    # topology. Ordinary inner/mid terminals may be budgeted down; pendant
-    # switches are restored afterward as full real foliage supports.
+    # topology. Ordinary inner/mid terminals are budgeted continuously. Pendant
+    # switches remain real wood but receive short foliage runs instead of another
+    # duplicate floor-reaching curtain.
     willow_anchor_distribution.install()
     willow_crown_envelope.install()
     willow_terminal_budget.install()
     willow_pendant_priority.install()
 
-    # Shape parent/child roots in the branch graph itself before foliage points or
-    # game-runtime metadata are derived from it. This removes abrupt first-ring
-    # collar cliffs and adds bounded parent flare around substantial inserts.
+    # Generic junction shaping still improves ordinary parent/child forks. The
+    # final relay-continuity pass runs afterward and has authority over the first
+    # trunk takeover: it removes the capped shoulder, normalizes local flare and
+    # creates a small hidden solid overlap for robust Exact Boolean fusion.
     organic_junctions.install()
+    willow_relay_final_continuity.install()
 
     foliage_assembly.install()
     foliage_assembly_lods.install()
@@ -140,7 +151,7 @@ def register():
 
     advanced_operators.register()
     operators.register()
-    game_asset_export.GENERATOR_VERSION = "0.9.8"
+    game_asset_export.GENERATOR_VERSION = "0.9.9"
     game_asset_export.register()
     procedural_pbr.register()
 
@@ -196,6 +207,7 @@ def unregister():
     foliage_atlas_assembly.uninstall()
     foliage_assembly_lods.uninstall()
     foliage_assembly.uninstall()
+    willow_relay_final_continuity.uninstall()
     organic_junctions.uninstall()
     willow_pendant_priority.uninstall()
     willow_terminal_budget.uninstall()
@@ -208,11 +220,13 @@ def unregister():
     willow_sinuous_geometry.uninstall()
     willow_structure_motion.uninstall()
     willow_outward_distribution.uninstall()
+    willow_crown_integrity.uninstall()
     willow_scaffold_crown.uninstall()
     willow_relay_handoff.uninstall()
     willow_relay_architecture.uninstall()
     willow_architecture.uninstall()
     willow_relay_architecture.restore_preparation()
+    willow_crown_integrity.restore_preparation()
     branch_profiles.uninstall()
     advanced_growth.uninstall()
     appearance_state.uninstall()
