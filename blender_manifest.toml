@@ -1,8 +1,8 @@
 schema_version = "1.0.0"
 id = "trees2"
-version = "0.9.3"
+version = "0.9.4"
 name = "Trees 2.0"
-tagline = "Sinuous willow growth with a smooth continuous crown envelope"
+tagline = "Game-ready procedural trees with organized two-mesh runtime export"
 maintainer = "dadou000"
 type = "add-on"
 blender_version_min = "5.2.0"
@@ -11,4 +11,4 @@ tags = ["Modeling", "Geometry Nodes"]
 
 [permissions]
 network = "Check GitHub and download newer Trees 2.0 versions for one-click updates"
-files = "Write direct PNG procedural PBR textures, baked impostor atlases, and temporary update packages to disk"
+files = "Write organized game assets, runtime branch metadata, procedural PBR textures, baked impostor atlases, and temporary update packages to disk"
