@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 9, 4),
+    "version": (0, 9, 5),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with two-mesh game export, persistent GPU branch/foliage mappings, organized LOD assets, research-based willow architecture, direct PBR export, and impostors",
+    "description": "Procedural game-ready trees with corrected willow card orientation, organically blended exact junctions, two-mesh game export, persistent GPU mappings, organized LOD assets, direct PBR export, and impostors",
     "category": "Add Mesh",
 }
 
@@ -31,9 +31,11 @@ from . import (
     game_asset_properties,
     game_asset_runtime,
     game_asset_ui,
+    junction_surface_fairing,
     leaf_synthesis,
     leaf_synthesis_runtime,
     operators,
+    organic_junctions,
     pbr_live_apply,
     pbr_pipeline,
     pbr_properties,
@@ -45,6 +47,7 @@ from . import (
     willow_anchor_distribution,
     willow_architecture,
     willow_bark_synthesis,
+    willow_card_orientation,
     willow_crown_envelope,
     willow_crown_spread,
     willow_foliage_fix,
@@ -93,13 +96,27 @@ def register():
     willow_crown_envelope.install()
     willow_terminal_budget.install()
 
+    # Shape parent/child roots in the branch graph itself before foliage points or
+    # game-runtime metadata are derived from it.  This removes abrupt first-ring
+    # collar cliffs and adds bounded parent flare around substantial inserts.
+    organic_junctions.install()
+
     foliage_assembly.install()
     foliage_assembly_lods.install()
     foliage_atlas_assembly.install()
     willow_foliage_fix.install()
 
+    # The willow atlas root lives at card +Z/high V while the physical hanging
+    # direction is root->tip.  Flip the card-local Y/Z convention once, after all
+    # foliage generators, so leaf tips remain gravity-facing at every LOD.
+    willow_card_orientation.install()
+
     foliage_sizing.install()
     exact_junctions.install()
+
+    # Exact Boolean removes interior overlap; this final local relaxation removes
+    # the remaining polygonal saddle/ridge only around major fused junctions.
+    junction_surface_fairing.install()
 
     # Runtime mapping is deliberately installed after every geometry/foliage
     # wrapper.  It records the final branch graph, longitudinal wood coordinates
@@ -108,6 +125,7 @@ def register():
 
     advanced_operators.register()
     operators.register()
+    game_asset_export.GENERATOR_VERSION = "0.9.5"
     game_asset_export.register()
     procedural_pbr.register()
 
@@ -155,12 +173,15 @@ def unregister():
     operators.unregister()
     advanced_operators.unregister()
     game_asset_runtime.uninstall()
+    junction_surface_fairing.uninstall()
     exact_junctions.uninstall()
     foliage_sizing.uninstall()
+    willow_card_orientation.uninstall()
     willow_foliage_fix.uninstall()
     foliage_atlas_assembly.uninstall()
     foliage_assembly_lods.uninstall()
     foliage_assembly.uninstall()
+    organic_junctions.uninstall()
     willow_terminal_budget.uninstall()
     willow_crown_envelope.uninstall()
     willow_anchor_distribution.uninstall()
