@@ -1,12 +1,14 @@
-"""Preserve real pendant switches as full foliage supports.
+"""Give real pendant switches a dedicated short-foliage budget.
 
-The continuous crown envelope and terminal-budget stages are intentionally
-conservative with ordinary inner/mid terminals.  Pendant switches are different:
-they are actual thin woody supports generated only on exposed outer secondary /
-tertiary branches.  Treating them as virtual fill would defeat their purpose.
+The 0.9.8 priority pass restored pendant switches to the unrestricted real-
+terminal path.  Because the willow curtain generator already creates long
+hanging strands, that duplicated the droop of the *wooden* switch itself and
+produced huge foliage sheets with too little visible support.
 
-This final skeleton wrapper runs after terminal budgeting and restores switch
-terminals to the normal real-terminal path used by willow_foliage_fix.
+Pendant switches remain real branches in the skeleton/runtime graph, but their
+foliage is routed through the existing budgeted-support path: several short
+leafy runs are distributed along each real switch instead of generating another
+floor-reaching curtain from it.
 """
 
 from . import generator
@@ -21,34 +23,33 @@ def _generate_with_switch_priority(settings):
     if str(getattr(settings, "species_preset", "")) != "WILLOW":
         return branches, terminals
 
-    restored = 0
+    budgeted = 0
     for branch in terminals:
         if not branch.get("willow_pendant_switch", False):
             continue
 
-        # Undo only foliage-budget classification.  Structural and runtime
-        # metadata remain intact.
-        branch.pop("willow_aux_anchor", None)
-        branch.pop("willow_real_terminal_budgeted", None)
-        branch.pop("willow_anchor_weight", None)
-        branch.pop("willow_length_scale", None)
-        branch.pop("willow_fill_only", None)
-        branch.pop("willow_max_bundles", None)
-        branch.pop("willow_anchor_level", None)
-        branch["willow_terminal_weight"] = max(
-            1.0, float(branch.get("willow_terminal_weight", 1.0))
-        )
-        branch["willow_terminal_length_scale"] = max(
-            0.92, float(branch.get("willow_terminal_length_scale", 1.0))
-        )
+        # This metadata affects foliage assembly only.  The branch remains a
+        # normal real woody branch with its own ID, parent and runtime mapping.
+        branch["willow_aux_anchor"] = True
+        branch["willow_real_terminal_budgeted"] = True
+        branch["willow_switch_foliage_support"] = True
+        branch["willow_anchor_weight"] = 0.62
+        branch["willow_length_scale"] = 0.44
+        branch["willow_fill_only"] = False
+        branch["willow_max_bundles"] = 3
+        branch["willow_anchor_level"] = int(branch.get("level", 0))
+        branch["willow_radial_exposure"] = float(branch.get("willow_terminal_exposure", 0.72))
+        branch["willow_terminal_weight"] = 0.78
+        branch["willow_terminal_length_scale"] = 0.56
         branch["willow_terminal_fill_only"] = False
         branch["willow_pendant_primary_support"] = True
-        restored += 1
+        budgeted += 1
 
     try:
         trunk = next(branch for branch in branches if int(branch.get("level", 0)) == 0)
-        trunk["willow_pendant_priority_version"] = 1
-        trunk["willow_pendant_primary_supports"] = int(restored)
+        trunk["willow_pendant_priority_version"] = 2
+        trunk["willow_pendant_primary_supports"] = int(budgeted)
+        trunk["willow_pendant_short_foliage_budget"] = True
     except Exception:
         pass
     return branches, terminals
