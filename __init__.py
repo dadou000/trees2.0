@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 9, 6),
+    "version": (0, 9, 7),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with hierarchy-balanced willow branches, corrected card orientation, organically blended junctions, two-mesh game export, persistent GPU mappings, direct PBR export, and impostors",
+    "description": "Procedural game-ready trees with continuous willow relay handoffs, viable structural limbs, hierarchy-balanced branches, corrected foliage cards, organic junctions, two-mesh runtime export, and GPU mappings",
     "category": "Add Mesh",
 }
 
@@ -47,6 +47,7 @@ from . import (
     willow_anchor_distribution,
     willow_architecture,
     willow_bark_synthesis,
+    willow_branch_viability,
     willow_card_orientation,
     willow_crown_envelope,
     willow_crown_spread,
@@ -55,6 +56,7 @@ from . import (
     willow_leaf_synthesis,
     willow_outward_distribution,
     willow_relay_architecture,
+    willow_relay_handoff,
     willow_sinuous_geometry,
     willow_structure_motion,
     willow_terminal_budget,
@@ -74,13 +76,13 @@ def register():
     advanced_growth.install()
     branch_profiles.install()
 
-    # Research-based sympodial willow architecture: retain useful generic growth,
-    # terminate the basal axis through relay growth, then clean the generic
-    # recursive hierarchy so major structure occupies the outer crown instead of
-    # accumulating as short spiderweb laterals near the central axes.
+    # Build the sympodial relay topology, then immediately convert the first
+    # takeover into a true trunk continuation: the obsolete parent axis becomes
+    # only a short tapered nub and the relay inherits parent tangent/diameter.
     willow_relay_architecture.prepare()
     willow_architecture.install()
     willow_relay_architecture.install()
+    willow_relay_handoff.install()
     willow_outward_distribution.install()
 
     # Deform the retained hierarchy with correlated botanical motion, then give
@@ -88,12 +90,12 @@ def register():
     willow_structure_motion.install()
     willow_sinuous_geometry.install()
 
-    # Broad-crown shaping runs on the final curved wood.  Then enforce parent /
-    # child dimensional hierarchy before any foliage-support scoring: transferred
-    # old-trunk subtrees are rescaled to their new relay support, sibling roots are
-    # softly redistributed and local branch area/length budgets are normalized.
+    # Broad-crown shaping runs on the final curved wood. Then enforce parent /
+    # child dimensional hierarchy and finally reject the remaining pathological
+    # thick-short-bare terminal limb cases before foliage-support scoring.
     willow_crown_spread.install()
     willow_hierarchy_balance.install()
+    willow_branch_viability.install()
 
     # Final-skeleton virtual support scoring and crown envelope use the corrected
     # hierarchy, so foliage density cannot hide or amplify an impossible branch
@@ -103,7 +105,7 @@ def register():
     willow_terminal_budget.install()
 
     # Shape parent/child roots in the branch graph itself before foliage points or
-    # game-runtime metadata are derived from it.  This removes abrupt first-ring
+    # game-runtime metadata are derived from it. This removes abrupt first-ring
     # collar cliffs and adds bounded parent flare around substantial inserts.
     organic_junctions.install()
 
@@ -113,7 +115,7 @@ def register():
     willow_foliage_fix.install()
 
     # The willow atlas root lives at card +Z/high V while the physical hanging
-    # direction is root->tip.  Flip the card-local Y/Z convention once, after all
+    # direction is root->tip. Flip the card-local Y/Z convention once, after all
     # foliage generators, so leaf tips remain gravity-facing at every LOD.
     willow_card_orientation.install()
 
@@ -125,13 +127,13 @@ def register():
     junction_surface_fairing.install()
 
     # Runtime mapping is deliberately installed after every geometry/foliage
-    # wrapper.  It records the final branch graph, longitudinal wood coordinates
+    # wrapper. It records the final branch graph, longitudinal wood coordinates
     # and foliage support bindings without changing the visible authoring tree.
     game_asset_runtime.install()
 
     advanced_operators.register()
     operators.register()
-    game_asset_export.GENERATOR_VERSION = "0.9.6"
+    game_asset_export.GENERATOR_VERSION = "0.9.7"
     game_asset_export.register()
     procedural_pbr.register()
 
@@ -191,11 +193,13 @@ def unregister():
     willow_terminal_budget.uninstall()
     willow_crown_envelope.uninstall()
     willow_anchor_distribution.uninstall()
+    willow_branch_viability.uninstall()
     willow_hierarchy_balance.uninstall()
     willow_crown_spread.uninstall()
     willow_sinuous_geometry.uninstall()
     willow_structure_motion.uninstall()
     willow_outward_distribution.uninstall()
+    willow_relay_handoff.uninstall()
     willow_relay_architecture.uninstall()
     willow_architecture.uninstall()
     willow_relay_architecture.restore_preparation()
