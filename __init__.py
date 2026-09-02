@@ -1,10 +1,10 @@
 bl_info = {
     "name": "Trees 2.0",
     "author": "dadou000",
-    "version": (0, 9, 7),
+    "version": (0, 9, 8),
     "blender": (5, 2, 0),
     "location": "3D View > Sidebar > Trees 2.0",
-    "description": "Procedural game-ready trees with continuous willow relay handoffs, viable structural limbs, hierarchy-balanced branches, corrected foliage cards, organic junctions, two-mesh runtime export, and GPU mappings",
+    "description": "Procedural game-ready trees with coherent willow scaffold crowns, real pendant switch branches, continuous relay handoffs, viable branch hierarchy, organic junctions, two-mesh runtime export, and GPU mappings",
     "category": "Add Mesh",
 }
 
@@ -55,8 +55,11 @@ from . import (
     willow_hierarchy_balance,
     willow_leaf_synthesis,
     willow_outward_distribution,
+    willow_pendant_priority,
+    willow_pendant_switches,
     willow_relay_architecture,
     willow_relay_handoff,
+    willow_scaffold_crown,
     willow_sinuous_geometry,
     willow_structure_motion,
     willow_terminal_budget,
@@ -76,13 +79,15 @@ def register():
     advanced_growth.install()
     branch_profiles.install()
 
-    # Build the sympodial relay topology, then immediately convert the first
-    # takeover into a true trunk continuation: the obsolete parent axis becomes
-    # only a short tapered nub and the relay inherits parent tangent/diameter.
+    # Build the sympodial topology and convert the first takeover into a true
+    # trunk continuation.  The coherent scaffold-crown pass then guarantees a
+    # small azimuthally distributed major support set, fills long empty spans
+    # with real secondaries and removes only the generic upper-core twig web.
     willow_relay_architecture.prepare()
     willow_architecture.install()
     willow_relay_architecture.install()
     willow_relay_handoff.install()
+    willow_scaffold_crown.install()
     willow_outward_distribution.install()
 
     # Deform the retained hierarchy with correlated botanical motion, then give
@@ -90,19 +95,21 @@ def register():
     willow_structure_motion.install()
     willow_sinuous_geometry.install()
 
-    # Broad-crown shaping runs on the final curved wood. Then enforce parent /
-    # child dimensional hierarchy and finally reject the remaining pathological
-    # thick-short-bare terminal limb cases before foliage-support scoring.
+    # Broad-crown shaping runs on the final curved wood. Enforce parent/child
+    # dimensions, reject pathological thick-short-bare limbs, then add actual
+    # thin pendant switch branches on exposed outer secondary/tertiary supports.
     willow_crown_spread.install()
     willow_hierarchy_balance.install()
     willow_branch_viability.install()
+    willow_pendant_switches.install()
 
-    # Final-skeleton virtual support scoring and crown envelope use the corrected
-    # hierarchy, so foliage density cannot hide or amplify an impossible branch
-    # relationship.
+    # Final-skeleton anchor scoring and envelope equalization see the real switch
+    # topology. Ordinary inner/mid terminals may be budgeted down; pendant
+    # switches are restored afterward as full real foliage supports.
     willow_anchor_distribution.install()
     willow_crown_envelope.install()
     willow_terminal_budget.install()
+    willow_pendant_priority.install()
 
     # Shape parent/child roots in the branch graph itself before foliage points or
     # game-runtime metadata are derived from it. This removes abrupt first-ring
@@ -133,7 +140,7 @@ def register():
 
     advanced_operators.register()
     operators.register()
-    game_asset_export.GENERATOR_VERSION = "0.9.7"
+    game_asset_export.GENERATOR_VERSION = "0.9.8"
     game_asset_export.register()
     procedural_pbr.register()
 
@@ -190,15 +197,18 @@ def unregister():
     foliage_assembly_lods.uninstall()
     foliage_assembly.uninstall()
     organic_junctions.uninstall()
+    willow_pendant_priority.uninstall()
     willow_terminal_budget.uninstall()
     willow_crown_envelope.uninstall()
     willow_anchor_distribution.uninstall()
+    willow_pendant_switches.uninstall()
     willow_branch_viability.uninstall()
     willow_hierarchy_balance.uninstall()
     willow_crown_spread.uninstall()
     willow_sinuous_geometry.uninstall()
     willow_structure_motion.uninstall()
     willow_outward_distribution.uninstall()
+    willow_scaffold_crown.uninstall()
     willow_relay_handoff.uninstall()
     willow_relay_architecture.uninstall()
     willow_architecture.uninstall()
